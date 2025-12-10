@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
+{
+	"name": "Tutorial: Upload file to storage with SAS token",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/typescript-node:0-20",
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/azure/azure-dev/azd:latest": {},
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// 5173: Vite React
+	// 7071: Azure Functions
+	"forwardPorts": [
+		5173,
+		7071
+	],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "npm install -g azure-functions-core-tools@4 --save-exact --unsafe-perm true && az bicep install",
+	// Configure tool-specific properties.
+	// "customizations": {},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "root",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-azurefunctions",
+				"ms-azuretools.vscode-azurestaticwebapps",
+				"ms-azuretools.vscode-azurestorage",
+				"humao.rest-client",
+				"ms-azuretools.vscode-bicep",
+				"ms-azuretools.azure-dev",
+				"ms-azuretools.vscode-docker",
+				"GitHub.copilot-chat",
+				"GitHub.copilot"
+			]
+		}
+	}
+}

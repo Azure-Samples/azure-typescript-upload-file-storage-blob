@@ -1,0 +1,65 @@
+name: azure-upload-file-to-storage
+metadata:
+  template: azure-upload-file-to-storage@1.0.0
+
+services:
+  api:
+    project: ./azure-upload-file-to-storage/api
+    language: js
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ./
+  web:
+    project: ./azure-upload-file-to-storage/app
+    language: js
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ./
+
+hooks:
+  postprovision:
+    posix: 
+      sh: bash
+      run: |
+        # Get environment values for the application
+        azd env get-values > .env
+        echo "Environment configured. Data will be loaded after deployment."
+    windows:
+      shell: pwsh
+      run: |
+        azd env get-values > .env
+        Write-Host "Environment configured. Data will be loaded after deployment."
+  
+  postdeploy:
+    posix:
+      shell: sh
+      run: |
+        echo "Updating API container app with frontend URL..."
+        API_NAME=$(azd env get-value AZURE_CONTAINER_APP_API_NAME)
+        WEB_URL=$(azd env get-value WEB_URL)
+        RESOURCE_GROUP=$(azd env get-value AZURE_RESOURCE_GROUP)
+        
+        az containerapp update \
+          --name "$API_NAME" \
+          --resource-group "$RESOURCE_GROUP" \
+          --set-env-vars "FRONTEND_URL=$WEB_URL" \
+          --output none
+        
+        echo "API updated with FRONTEND_URL=$WEB_URL"
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Updating API container app with frontend URL..."
+        $API_NAME = azd env get-value AZURE_CONTAINER_APP_API_NAME
+        $WEB_URL = azd env get-value WEB_URL
+        $RESOURCE_GROUP = azd env get-value AZURE_RESOURCE_GROUP
+        
+        az containerapp update `
+          --name "$API_NAME" `
+          --resource-group "$RESOURCE_GROUP" `
+          --set-env-vars "FRONTEND_URL=$WEB_URL" `
+          --output none
+        
+        Write-Host "API updated with FRONTEND_URL=$WEB_URL"

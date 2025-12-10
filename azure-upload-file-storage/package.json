@@ -1,0 +1,76 @@
+{
+  "name": "azure-upload-file-storage",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Azure file upload application with Fastify API and React frontend",
+  "workspaces": [
+    "api",
+    "app"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm install --workspace=api && npm install --workspace=app",
+    "clean": "npm run clean:api && npm run clean:app",
+    "clean:api": "npm run clean --workspace=api",
+    "clean:app": "npm run clean --workspace=app",
+    "build": "npm run build:api && npm run build:app",
+    "build:api": "npm run build --workspace=api",
+    "build:app": "npm run build --workspace=app",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:app\"",
+    "dev:api": "npm run dev --workspace=api",
+    "dev:app": "npm run dev --workspace=app",
+    "start": "concurrently \"npm run start:api\" \"npm run start:app\"",
+    "start:api": "npm run start --workspace=api",
+    "start:app": "npm run start --workspace=app",
+    "test:api": "npm run test --workspace=api",
+    "test:app": "npm run test --workspace=app",
+    "lint": "npm run lint:api && npm run lint:app",
+    "lint:api": "npm run lint --workspace=api",
+    "lint:app": "npm run lint --workspace=app",
+    "format": "npm run format:api && npm run format:app",
+    "format:api": "npm run format --workspace=api",
+    "format:app": "npm run format --workspace=app",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down",
+    "docker:up:build": "docker-compose up --build",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:api": "docker-compose logs -f api",
+    "docker:logs:app": "docker-compose logs -f app",
+    "docker:clean": "docker-compose down -v --rmi all",
+    "setup": "npm run setup:api",
+    "setup:api": "cd api && bash setup-local-dev.sh",
+    "test:sas": "cd api && bash tests/test-sas-generation.sh",
+    "deploy": "azd up",
+    "deploy:api": "azd deploy api",
+    "deploy:app": "azd deploy app",
+    "logs": "azd logs",
+    "logs:api": "azd logs --service api",
+    "logs:app": "azd logs --service app",
+    "check": "npm run check:api && npm run check:app",
+    "check:api": "cd api && npm run compile",
+    "check:app": "cd app && npm run compile"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/azure-upload-file-storage"
+  },
+  "keywords": [
+    "azure",
+    "blob-storage",
+    "file-upload",
+    "fastify",
+    "react",
+    "managed-identity",
+    "container-apps",
+    "static-web-apps"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -9,7 +9,15 @@
 *.user
 *.userosscache
 *.sln.docstates
+
+# Environment variables and secrets
 *.env
+*.env.local
+*.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -300,6 +308,61 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+
+# Node.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+.pnpm-store/
+package-lock.json.bak
+yarn.lock.bak
+pnpm-lock.yaml.bak
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# React / Vite
+dist/
+dist-ssr/
+*.local
+.vite/
+.parcel-cache/
+
+# Testing
+coverage/
+.nyc_output/
+.jest/
+
+# Docker
+.docker/
+docker-compose.override.yml
+*.log
+
+# Azure
+.azure/
+*.azureauth
+.azureconfig
+.deployment
+azds.yaml
+azure-pipelines-*.yml
+.func/
+__blobstorage__/
+__queuestorage__/
+__azurite_db*__.json
+.python_packages/
+
+# Bicep
+*.bicep.lock
+
+# Local development
+local.settings.json
+.env.development
 
 # Visual Studio 6 build log
 *.plg

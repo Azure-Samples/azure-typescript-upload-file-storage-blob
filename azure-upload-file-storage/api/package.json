@@ -1,0 +1,36 @@
+{
+  "name": "upload-file-api",
+  "version": "2.0.0",
+  "description": "File upload API using Fastify and managed identity",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "format": "prettier --write \"src/**/*.ts\" \"server.ts\"",
+    "lint": "eslint src/**/*.ts server.ts --fix",
+    "test": "echo \"No tests yet...\""
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^10.0.1",
+    "@azure/storage-blob": "^12.26.0",
+    "@azure/identity": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@eslint/js": "^9.20.0",
+    "eslint": "^9.20.1",
+    "globals": "^15.15.0",
+    "prettier": "^3.5.1",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0"
+  }
+}
