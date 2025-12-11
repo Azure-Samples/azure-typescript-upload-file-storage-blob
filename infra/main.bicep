@@ -13,6 +13,10 @@ param location string
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
+var prefix = '${environmentName}${resourceToken}'
+var principalType = 'User'
+@description('Id of the user or app to assign application roles')
+param principalId string = ''
 
 // Resource group
 resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
@@ -21,9 +25,32 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   tags: tags
 }
 
+// User-assigned managed identity for the container app
+module managedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
+  name: 'containerAppIdentity'
+  scope: rg
+  params: {
+    name: '${prefix}-identity'
+    location: location
+    tags: tags
+  }
+}
+
+
+// RBAC: Grant managed identity AcrPull role on Container Registry
+module acrPullRoleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = {
+  name: 'acrPullRole'
+  scope: rg
+  params: {
+    principalId: managedIdentity.outputs.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
+    resourceId: containerRegistry.outputs.resourceId
+    principalType: 'ServicePrincipal'
+  }
+}
 // Log Analytics Workspace for Container Apps
 module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.14.2' = {
-  name: 'logs-deployment'
+  name: 'logAnalytics'
   scope: rg
   params: {
     name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
@@ -34,7 +61,7 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.14.2' = 
 
 // Storage Account with upload container
 module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
-  name: 'storage-deployment'
+  name: 'storage'
   scope: rg
   params: {
     name: '${abbrs.storageStorageAccounts}${resourceToken}'
@@ -43,6 +70,28 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
     kind: 'StorageV2'
     skuName: 'Standard_LRS'
     allowBlobPublicAccess: true
+    roleAssignments: [
+      {
+        principalId: managedIdentity.outputs.principalId
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: managedIdentity.outputs.principalId
+        roleDefinitionIdOrName: 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a' // Storage Blob Delegator
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: principalId
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+        principalType: principalType
+      }
+      {
+        principalId: principalId
+        roleDefinitionIdOrName: 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a' // Storage Blob Delegator
+        principalType: principalType
+      }
+    ]
     blobServices: {
       containers: [
         {
@@ -65,7 +114,7 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
 
 // Container Registry
 module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.3' = {
-  name: 'acr-deployment'
+  name: 'acr'
   scope: rg
   params: {
     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
@@ -73,38 +122,46 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.3' =
     tags: tags
     acrSku: 'Basic'
     acrAdminUserEnabled: true
+    roleAssignments: [
+      {
+        principalId: managedIdentity.outputs.principalId
+        roleDefinitionIdOrName: '7f951dda-4ed3-4680-a7ca-43fe172d538d' // AcrPull
+        principalType: 'ServicePrincipal'
+      }      
+      {
+        principalId:principalId
+        roleDefinitionIdOrName: '7f951dda-4ed3-4680-a7ca-43fe172d538d' // AcrPull
+        principalType: principalType
+      }
+    ]
   }
 }
 
 // Container Apps Environment
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.3' = {
-  name: 'containerenv-deployment'
+module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.8.1' = {
+  name: 'acaEnvironment'
   scope: rg
   params: {
     name: '${abbrs.appManagedEnvironments}${resourceToken}'
     location: location
     tags: tags
+    logAnalyticsWorkspaceResourceId: logAnalytics.outputs.resourceId
+    zoneRedundant: false
   }
 }
 
 // API Container App
-module apiContainerApp 'br/public:avm/res/app/container-app:0.19.0' = {
-  name: 'api-deployment'
+module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
+  name: 'apiApp'
   scope: rg
   params: {
-    name: '${abbrs.appContainerApps}api-${resourceToken}'
+    name: 'api-${resourceToken}'
     location: location
     tags: union(tags, { 'azd-service-name': 'api' })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
     managedIdentities: {
-      systemAssigned: true
+      userAssignedResourceIds: [managedIdentity.outputs.resourceId]
     }
-    registries: [
-      {
-        server: containerRegistry.outputs.loginServer
-        identity: 'system'
-      }
-    ]
     containers: [
       {
         name: 'api'
@@ -121,6 +178,10 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.19.0' = {
           {
             name: 'Azure_Storage_AccountName'
             value: storage.outputs.name
+          }
+                    {
+            name: 'AZURE_CLIENT_ID'
+            value: managedIdentity.outputs.clientId
           }
         ]
         // probes: [
@@ -151,49 +212,33 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.19.0' = {
     ]
     ingressTargetPort: 3000
     ingressExternal: true
-    ingressTransport: 'auto'
-    scaleSettings: {
-      minReplicas: 0
-      maxReplicas: 1
-      rules: [
-        {
-          name: 'http-scale'
-          http: {
-            metadata: {
-              concurrentRequests: '50'
-            }
-          }
-        }
-      ]
-    }
+    ingressTransport: 'http'
+    scaleMinReplicas: 0
+    scaleMaxReplicas: 1
+    registries: [
+      {
+        server: containerRegistry.outputs.loginServer
+        identity: managedIdentity.outputs.resourceId
+      }
+    ]
   }
 }
 
 // Web/Frontend Container App
-module webContainerApp 'br/public:avm/res/app/container-app:0.19.0' = {
-  name: 'web-deployment'
+module webContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
+  name: 'webApp'
   scope: rg
   params: {
-    name: '${abbrs.appContainerApps}web-${resourceToken}'
+    name: 'app-${resourceToken}'
     location: location
-    tags: union(tags, { 'azd-service-name': 'web' })
+    tags: union(tags, { 'azd-service-name': 'app' })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
-    registries: [
-      {
-        server: containerRegistry.outputs.loginServer
-        username: containerRegistry.outputs.name
-        passwordSecretRef: 'registry-password'
-      }
-    ]
-    secrets: [
-      {
-        name: 'registry-password'
-        value: containerRegistry.outputs.loginServer
-      }
-    ]
+    managedIdentities: {
+      userAssignedResourceIds: [managedIdentity.outputs.resourceId]
+    }
     containers: [
       {
-        name: 'web'
+        name: 'app'
         image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
           cpu: json('0.25')
@@ -202,7 +247,7 @@ module webContainerApp 'br/public:avm/res/app/container-app:0.19.0' = {
         env: [
           {
             name: 'VITE_API_URL'
-            value: 'https://${apiContainerApp.outputs.fqdn}'
+            value: ''
           }
         ]
         // probes: [
@@ -233,44 +278,15 @@ module webContainerApp 'br/public:avm/res/app/container-app:0.19.0' = {
     ]
     ingressTargetPort: 8080
     ingressExternal: true
-    ingressTransport: 'auto'
-    scaleSettings: {
-      minReplicas: 0
-      maxReplicas: 1
-    }
-  }
-}
-
-// Grant API Container App Storage Blob Data Contributor role
-module apiStorageBlobRole 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
-  name: 'api-storage-blob-role'
-  scope: rg
-  params: {
-    principalId: apiContainerApp.outputs.?systemAssignedMIPrincipalId ?? ''
-    roleDefinitionIdOrName: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe') // Storage Blob Data Contributor
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Grant API Container App Storage Blob Delegator role
-module apiStorageDelegatorRole 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
-  name: 'api-storage-delegator-role'
-  scope: rg
-  params: {
-    principalId: apiContainerApp.outputs.?systemAssignedMIPrincipalId ?? ''
-    roleDefinitionIdOrName: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a') // Storage Blob Delegator
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Grant Container Apps ACR Pull role
-module apiAcrPullRole 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
-  name: 'api-acr-pull-role'
-  scope: rg
-  params: {
-    principalId: apiContainerApp.outputs.?systemAssignedMIPrincipalId ?? ''
-    roleDefinitionIdOrName: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalType: 'ServicePrincipal'
+    ingressTransport: 'http'
+    scaleMinReplicas: 1
+    scaleMaxReplicas: 3
+    registries: [
+      {
+        server: containerRegistry.outputs.loginServer
+        identity: managedIdentity.outputs.resourceId
+      }
+    ]
   }
 }
 
@@ -278,11 +294,19 @@ module apiAcrPullRole 'br/public:avm/res/authorization/role-assignment/rg-scope:
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_RESOURCE_GROUP string = rg.name
+
+// Container Registry and Container Apps
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerAppsEnvironment.outputs.name
+
+// Apps
 output AZURE_CONTAINER_APP_API_NAME string = apiContainerApp.outputs.name
+output AZURE_CONTAINER_APP_WEB_NAME string = webContainerApp.outputs.name
+
 output API_URL string = 'https://${apiContainerApp.outputs.fqdn}'
 output WEB_URL string = 'https://${webContainerApp.outputs.fqdn}'
+
+// Storage Account
 output AZURE_STORAGE_ACCOUNT_NAME string = storage.outputs.name
-output AZURE_STORAGE_BLOB_ENDPOINT string = storage.outputs.primaryBlobEndpoint
+output AZURE_STORAGE_BLOB_ENDPOINT string = '${storage.outputs.primaryBlobEndpoint}upload'

@@ -4,19 +4,21 @@ metadata:
 
 services:
   api:
-    project: ./azure-upload-file-to-storage/api
-    language: js
+    project: ./azure-upload-file-storage/api
+    language: ts
     host: containerapp
+    resourceName: ${AZURE_CONTAINER_APP_API_NAME}
     docker:
       path: ./Dockerfile
-      context: ./
-  web:
-    project: ./azure-upload-file-to-storage/app
-    language: js
+      context: ../../
+  app:
+    project: ./azure-upload-file-storage/app
+    language: ts
     host: containerapp
+    resourceName: ${AZURE_CONTAINER_APP_WEB_NAME}
     docker:
       path: ./Dockerfile
-      context: ./
+      context: ../../
 
 hooks:
   postprovision:
@@ -36,30 +38,50 @@ hooks:
     posix:
       shell: sh
       run: |
-        echo "Updating API container app with frontend URL..."
+        echo "Updating container apps with environment variables..."
         API_NAME=$(azd env get-value AZURE_CONTAINER_APP_API_NAME)
+        WEB_NAME=$(azd env get-value AZURE_CONTAINER_APP_WEB_NAME)
+        API_URL=$(azd env get-value API_URL)
         WEB_URL=$(azd env get-value WEB_URL)
         RESOURCE_GROUP=$(azd env get-value AZURE_RESOURCE_GROUP)
         
+        echo "Updating API with FRONTEND_URL=$WEB_URL"
         az containerapp update \
           --name "$API_NAME" \
           --resource-group "$RESOURCE_GROUP" \
           --set-env-vars "FRONTEND_URL=$WEB_URL" \
           --output none
         
-        echo "API updated with FRONTEND_URL=$WEB_URL"
+        echo "Updating frontend app with VITE_API_URL=$API_URL"
+        az containerapp update \
+          --name "$WEB_NAME" \
+          --resource-group "$RESOURCE_GROUP" \
+          --set-env-vars "VITE_API_URL=$API_URL" \
+          --output none
+        
+        echo "Both container apps updated successfully"
     windows:
       shell: pwsh
       run: |
-        Write-Host "Updating API container app with frontend URL..."
+        Write-Host "Updating container apps with environment variables..."
         $API_NAME = azd env get-value AZURE_CONTAINER_APP_API_NAME
+        $WEB_NAME = azd env get-value AZURE_CONTAINER_APP_WEB_NAME
+        $API_URL = azd env get-value API_URL
         $WEB_URL = azd env get-value WEB_URL
         $RESOURCE_GROUP = azd env get-value AZURE_RESOURCE_GROUP
         
+        Write-Host "Updating API with FRONTEND_URL=$WEB_URL"
         az containerapp update `
           --name "$API_NAME" `
           --resource-group "$RESOURCE_GROUP" `
           --set-env-vars "FRONTEND_URL=$WEB_URL" `
           --output none
         
-        Write-Host "API updated with FRONTEND_URL=$WEB_URL"
+        Write-Host "Updating frontend app with VITE_API_URL=$API_URL"
+        az containerapp update `
+          --name "$WEB_NAME" `
+          --resource-group "$RESOURCE_GROUP" `
+          --set-env-vars "VITE_API_URL=$API_URL" `
+          --output none
+        
+        Write-Host "Both container apps updated successfully"

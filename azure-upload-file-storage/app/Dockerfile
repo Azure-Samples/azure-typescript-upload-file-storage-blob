@@ -3,14 +3,19 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from app directory
+COPY azure-upload-file-storage/app/package*.json ./
+COPY azure-upload-file-storage/app/tsconfig.json ./
 
 # Install dependencies
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm install
 
-# Copy source code
-COPY . .
+# Copy source code from app directory
+COPY azure-upload-file-storage/app/ .
 
 # Build the React app
 RUN npm run build
@@ -24,15 +29,14 @@ FROM node:24-alpine
 # Install nginx
 RUN apk add --no-cache nginx
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config from app directory
+COPY azure-upload-file-storage/app/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built static files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create non-root user and set permissions
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx && \
+# Create required directories and set permissions for nginx user
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
     chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
