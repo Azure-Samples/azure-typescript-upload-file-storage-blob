@@ -20,11 +20,15 @@ export async function getSasToken(
   const { container = 'upload', file, permission = 'w', timerange = '10' } = request.query;
 
   request.log.info({
+    method: request.method,
+    url: request.url,
+    origin: request.headers.origin,
+    referer: request.headers.referer,
     container,
     file,
     permission,
     timerange
-  }, 'Generating SAS token');
+  }, 'Incoming SAS token request');
 
   // Validate required parameters
   if (!file) {
@@ -85,17 +89,35 @@ export async function getSasToken(
 
     const sasUrl = `${blobClient.url}?${sasToken}`;
 
-    request.log.info(`Generated SAS token for ${container}/${file}`);
+    request.log.info({
+      container,
+      file,
+      blobUrl: blobClient.url,
+      sasUrlLength: sasUrl.length,
+      hasToken: sasToken.length > 0
+    }, `Successfully generated SAS token for ${container}/${file}`);
 
-    return reply.send({
-      url: sasUrl
-    });
+    const response = { url: sasUrl };
+    request.log.info({ response }, 'Sending SAS response to client');
+
+    return reply.send(response);
   } catch (error) {
-    request.log.error(error, 'Failed to generate SAS token');
+    request.log.error({
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      container,
+      file,
+      accountName
+    }, 'Failed to generate SAS token');
     
-    return reply.status(500).send({
+    const errorResponse = {
       error: 'Failed to generate SAS token',
       details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    };
+    
+    request.log.error({ errorResponse }, 'Sending error response to client');
+    
+    return reply.status(500).send(errorResponse);
   }
 }

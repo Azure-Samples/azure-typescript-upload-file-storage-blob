@@ -13,8 +13,15 @@ const fastify = Fastify({
 });
 
 // CORS configuration
+// Allow both production URL and local development origins
+const allowedOrigins: string[] = [
+  process.env.WEB_URL,
+  'http://localhost:5173',  // Vite dev server
+  'http://localhost:8080',  // Docker container
+].filter((origin): origin is string => typeof origin === 'string');
+
 await fastify.register(cors, {
-  origin: process.env.WEB_URL || '*',
+  origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 });
