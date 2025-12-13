@@ -1,0 +1,89 @@
+%% Authentication and Authorization Flow
+%% Shows how Managed Identity enables keyless authentication
+
+graph TB
+    %% Application Startup
+    Start([Container App Starts]) --> LoadEnv[Load Environment Variables<br/>AZURE_STORAGE_ACCOUNT_NAME<br/>AZURE_CLIENT_ID optional]
+    
+    LoadEnv --> CreateCred[Create DefaultAzureCredential<br/>@azure/identity]
+    
+    %% Credential Discovery Process
+    subgraph CredentialChain["🔍 Credential Discovery Chain"]
+        CreateCred --> CheckEnv{Environment<br/>Variables?}
+        CheckEnv -->|Yes| EnvCred[EnvironmentCredential<br/>CLIENT_ID, CLIENT_SECRET, TENANT_ID]
+        CheckEnv -->|No| CheckMI
+        
+        EnvCred -->|Not found| CheckMI{Managed<br/>Identity?}
+        CheckMI -->|Azure| IMDS[Query Azure IMDS<br/>http://169.254.169.254/metadata/identity]
+        CheckMI -->|Local| CheckAzCLI
+        
+        IMDS -->|Success| MICred[ManagedIdentityCredential<br/>User-Assigned]
+        IMDS -->|Fail| CheckAzCLI
+        
+        CheckAzCLI{Azure CLI<br/>Logged In?}
+        CheckAzCLI -->|Yes| AzCLICred[AzureCliCredential<br/>Uses: az account get-access-token]
+        CheckAzCLI -->|No| FailCred[❌ Credential Not Found]
+    end
+    
+    %% Successful Credential Flow
+    MICred --> VerifyPerms[Verify Storage Permissions<br/>verify-permissions.ts]
+    AzCLICred --> VerifyPerms
+    
+    subgraph PermVerification["✅ Permission Verification Tests"]
+        VerifyPerms --> Test1[Test 1: Storage Account Exists<br/>getAccountInfo]
+        Test1 -->|Success| Test2[Test 2: Can Get User Delegation Key<br/>Validates: Storage Blob Delegator role]
+        Test2 -->|Success| Test3[Test 3: Can List Blobs<br/>Validates: Storage Blob Data Contributor]
+        Test3 -->|Success| AllGood[✅ All Permissions Verified]
+        
+        Test1 -->|Fail| LogError1[❌ Storage account not found<br/>or network blocked]
+        Test2 -->|Fail| LogError2[❌ Missing Storage Blob Delegator role]
+        Test3 -->|Fail| LogError3[❌ Missing Storage Blob Data Contributor role]
+    end
+    
+    %% Start Server
+    AllGood --> StartServer[Start Fastify Server<br/>Port 3000]
+    LogError1 --> StartServer
+    LogError2 --> StartServer
+    LogError3 --> StartServer
+    
+    StartServer --> Ready[🚀 API Ready for Requests]
+    
+    %% Runtime Authentication
+    Ready --> Request[Incoming Request<br/>/api/sas]
+    
+    subgraph RuntimeAuth["🔐 Runtime Authentication (Per Request)"]
+        Request --> UseCred[Use DefaultAzureCredential<br/>from startup]
+        UseCred --> GetToken{Token<br/>Cached?}
+        GetToken -->|Yes| UseToken[Use Cached Token]
+        GetToken -->|No| RequestToken[Request New Token from<br/>Microsoft Entra ID]
+        
+        RequestToken --> EntraValidate[Entra ID Validates:<br/>1. Identity exists<br/>2. Identity not disabled<br/>3. Requested scope valid]
+        EntraValidate --> IssueToken[Issue OAuth Access Token<br/>Audience: storage.azure.com<br/>Valid: 1 hour]
+        
+        IssueToken --> UseToken
+        UseToken --> MakeAPICall[Make Azure Storage API Call<br/>Authorization: Bearer {token}]
+    end
+    
+    MakeAPICall --> StorageValidate[Storage Validates:<br/>1. Token signature<br/>2. Token not expired<br/>3. RBAC permissions]
+    
+    StorageValidate -->|Authorized| Success[✅ Operation Succeeds]
+    StorageValidate -->|Unauthorized| Fail[❌ 403 Forbidden]
+    
+    %% Error Handling
+    FailCred --> ShowError[Display Error:<br/>Run 'az login' locally<br/>or configure Managed Identity]
+    Fail --> LogRBACError[Log RBAC Error<br/>with Azure CLI commands<br/>to diagnose]
+    
+    %% Styling
+    classDef startClass fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px
+    classDef credClass fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px
+    classDef testClass fill:#E3F2FD,stroke:#2196F3,stroke-width:2px
+    classDef successClass fill:#C8E6C9,stroke:#66BB6A,stroke-width:3px
+    classDef errorClass fill:#FFCDD2,stroke:#F44336,stroke-width:2px
+    classDef runtimeClass fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px
+    
+    class Start,LoadEnv,CreateCred startClass
+    class CheckEnv,CheckMI,CheckAzCLI,EnvCred,MICred,AzCLICred,IMDS credClass
+    class VerifyPerms,Test1,Test2,Test3,PermVerification testClass
+    class AllGood,Success,Ready successClass
+    class FailCred,LogError1,LogError2,LogError3,Fail,ShowError,LogRBACError errorClass
+    class Request,UseCred,GetToken,UseToken,RequestToken,EntraValidate,IssueToken,MakeAPICall,StorageValidate runtimeClass

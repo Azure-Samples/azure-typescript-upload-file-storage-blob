@@ -1,0 +1,73 @@
+%% SAS Token Generation and File Upload Flow
+%% Detailed sequence showing User Delegation SAS pattern
+
+sequenceDiagram
+    participant User as 👤 User
+    participant Frontend as React Frontend
+    participant API as Fastify API
+    participant Identity as Managed Identity
+    participant Entra as Microsoft Entra ID
+    participant Storage as Azure Blob Storage
+    
+    %% File Selection
+    User->>Frontend: 1. Select file (photo.jpg)
+    Frontend->>Frontend: Validate file size (< 256KB)
+    
+    %% SAS Token Request
+    Note over Frontend,API: Phase 1: Request SAS Token
+    Frontend->>API: 2. GET /api/sas?file=photo.jpg<br/>&container=upload&permission=w<br/>&timerange=10
+    
+    %% CORS Preflight
+    Note over API: Check CORS origin
+    API-->>Frontend: OPTIONS 200 (CORS OK)
+    
+    %% Authentication Flow
+    Note over API,Entra: Phase 2: Authenticate with Azure
+    API->>Identity: 3. Get credential<br/>(DefaultAzureCredential)
+    Identity->>Entra: 4. Request OAuth token<br/>(using Managed Identity)
+    Entra->>Entra: Validate identity
+    Entra-->>Identity: 5. Return access token
+    Identity-->>API: 6. Return credential
+    
+    %% User Delegation Key Request
+    Note over API,Storage: Phase 3: Get User Delegation Key
+    API->>Storage: 7. getUserDelegationKey()<br/>startsOn: now<br/>expiresOn: now+10min
+    Storage->>Entra: 8. Validate token & RBAC<br/>(Storage Blob Delegator)
+    Entra-->>Storage: 9. Authorization granted
+    Storage-->>API: 10. Return User Delegation Key<br/>(temporary signing key)
+    
+    %% SAS Token Generation
+    Note over API: Phase 4: Generate SAS Token
+    API->>API: 11. generateBlobSASQueryParameters()<br/>- containerName: upload<br/>- blobName: photo.jpg<br/>- permissions: write<br/>- startsOn, expiresOn<br/>- userDelegationKey
+    API->>API: 12. HMAC-SHA256 signature<br/>with user delegation key
+    API->>API: 13. Construct SAS URL:<br/>https://{account}.blob.core.windows.net<br/>/upload/photo.jpg?sv=...&sig=...
+    
+    %% Return SAS to Frontend
+    API-->>Frontend: 14. Return JSON:<br/>{ "url": "https://...?{sas-params}" }
+    Frontend->>Frontend: Store SAS URL in state
+    
+    %% File Upload
+    Note over Frontend,Storage: Phase 5: Upload File Directly to Storage
+    User->>Frontend: 15. Click "Upload"
+    Frontend->>Frontend: 16. Convert File to ArrayBuffer
+    Frontend->>Storage: 17. PUT /upload/photo.jpg<br/>with SAS query params<br/>Body: file data
+    
+    %% SAS Validation
+    Storage->>Storage: 18. Validate SAS:<br/>- Signature matches?<br/>- Not expired?<br/>- Permission = write?
+    Storage->>Entra: 19. Verify user delegation key<br/>still valid
+    Entra-->>Storage: 20. Key valid
+    
+    %% Store File
+    Storage->>Storage: 21. Write blob to container
+    Storage-->>Frontend: 22. 201 Created
+    
+    %% Success Feedback
+    Frontend->>User: 23. Show success message
+    Frontend->>API: 24. GET /api/list?container=upload
+    API->>Storage: 25. listBlobsFlat()
+    Storage-->>API: 26. Return blob list
+    API-->>Frontend: 27. Return JSON: { "list": [...] }
+    Frontend->>User: 28. Display uploaded files
+    
+    %% Styling
+    Note over User,Storage: ✅ Keyless Authentication<br/>✅ Time-Limited SAS (10 min)<br/>✅ RBAC-Enforced<br/>✅ Direct Upload (no proxy)

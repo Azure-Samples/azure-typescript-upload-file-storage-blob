@@ -1,0 +1,89 @@
+%% Complete Data Flow: File Upload Journey
+%% Shows data transformations from user selection to storage
+
+graph LR
+    %% User Action
+    User([👤 User<br/>Selects File]) --> FileObj[Browser File Object<br/>name: photo.jpg<br/>size: 45KB<br/>type: image/jpeg]
+    
+    %% Frontend Processing
+    FileObj --> Validate{Size < 256KB?}
+    Validate -->|No| Error1[❌ Show Error:<br/>File too large]
+    Validate -->|Yes| FrontendState[React State<br/>selectedFile: File<br/>sasTokenUrl: ''<br/>uploadStatus: '']
+    
+    %% SAS Request Data
+    FrontendState --> BuildRequest[Build Request Data<br/>Query Params:<br/>file=photo.jpg<br/>container=upload<br/>permission=w<br/>timerange=10]
+    
+    BuildRequest --> HTTPGet[HTTP GET Request<br/>Content-Type: application/json<br/>Origin: http://localhost:5173]
+    
+    %% API Processing
+    HTTPGet --> APIRoute[API Route Handler<br/>/api/sas]
+    
+    subgraph APIProcessing["⚙️ API Data Processing"]
+        APIRoute --> ParseQuery[Parse Query Params<br/>file: string<br/>container: string default 'upload'<br/>permission: string default 'w'<br/>timerange: number default 10]
+        
+        ParseQuery --> ValidateParams{file<br/>parameter<br/>present?}
+        ValidateParams -->|No| Error2[❌ 400 Bad Request<br/>{ error: 'Missing file' }]
+        ValidateParams -->|Yes| TimeCalc[Calculate Time Bounds<br/>startsOn: new Date<br/>expiresOn: startsOn + 10min<br/>both required for expiration policy]
+        
+        TimeCalc --> DelegationKeyReq[User Delegation Key Request<br/>POST to Storage<br/>Body: XML with start/expiry<br/>Auth: Bearer {OAuth-token}]
+    end
+    
+    %% Azure Storage Response
+    DelegationKeyReq --> DelegationKeyResp[User Delegation Key Response<br/>SignedOid: identity-id<br/>SignedTid: tenant-id<br/>SignedStart: timestamp<br/>SignedExpiry: timestamp<br/>Value: base64-key]
+    
+    %% SAS Generation
+    DelegationKeyResp --> SASGen[Generate SAS Token<br/>Input:<br/>- containerName<br/>- blobName<br/>- permissions BitmaskPermissions<br/>- startsOn, expiresOn<br/>- userDelegationKey<br/>- accountName]
+    
+    SASGen --> SASParams[SAS Query Parameters<br/>sv: 2025-11-05<br/>st: ISO-8601 start<br/>se: ISO-8601 expiry<br/>sr: b blob<br/>sp: w write<br/>skoid, sktid, skt, ske<br/>sks, skv: key metadata<br/>sig: base64-HMAC-SHA256]
+    
+    SASParams --> SASUrl[Complete SAS URL<br/>https://stv2daytfgtvjwm<br/>.blob.core.windows.net<br/>/upload/photo.jpg?{params}]
+    
+    %% Return to Frontend
+    SASUrl --> APIResponse[API JSON Response<br/>{ url: string }]
+    APIResponse --> FrontendUpdate[Update React State<br/>sasTokenUrl: SAS-URL<br/>uploadStatus: 'Ready']
+    
+    %% File Upload Preparation
+    FrontendUpdate --> UserClick([👤 User<br/>Clicks Upload])
+    UserClick --> Convert[Convert File to ArrayBuffer<br/>FileReader.readAsArrayBuffer<br/>Result: Uint8Array in memory]
+    
+    Convert --> BlobClient[Create BlockBlobClient<br/>URL: SAS-URL from state<br/>No credentials needed<br/>SAS provides auth]
+    
+    %% Direct Upload to Storage
+    BlobClient --> UploadData[uploadData API Call<br/>Method: PUT<br/>Body: ArrayBuffer 45KB<br/>Headers:<br/>  x-ms-blob-type: BlockBlob<br/>  Content-Length: 45056<br/>  + SAS params in URL]
+    
+    %% Storage Processing
+    UploadData --> StorageValidate[Azure Storage Validation<br/>1. Parse SAS query params<br/>2. Verify signature HMAC-SHA256<br/>3. Check not expired<br/>4. Check permission includes 'w'<br/>5. Validate user delegation key]
+    
+    StorageValidate -->|Invalid| Error3[❌ 403 Forbidden<br/>Invalid SAS or expired]
+    StorageValidate -->|Valid| StoreBlob[Write Blob to Storage<br/>Container: upload<br/>Blob: photo.jpg<br/>Size: 45KB<br/>Type: image/jpeg<br/>Metadata: lastModified, etag]
+    
+    StoreBlob --> StorageResp[201 Created Response<br/>Headers:<br/>  ETag: blob-version<br/>  Last-Modified: timestamp<br/>  x-ms-request-id: guid]
+    
+    %% Update UI
+    StorageResp --> UpdateStatus[Update React State<br/>uploadStatus: 'Success'<br/>Trigger list refresh]
+    
+    UpdateStatus --> ListRequest[GET /api/list<br/>Query: container=upload]
+    
+    %% List Blobs
+    ListRequest --> ListAPI[API listBlobsFlat<br/>Iterator over blobs<br/>Returns: name, url, size]
+    
+    ListAPI --> ListResponse[API Response<br/>{ list: string[] }<br/>Array of blob URLs]
+    
+    ListResponse --> RenderUI[Render UI<br/>Grid of images<br/>or file names<br/>Show photo.jpg]
+    
+    RenderUI --> Complete([✅ Upload Complete<br/>File Visible])
+    
+    %% Styling
+    classDef userClass fill:#E1F5FF,stroke:#0078D4,stroke-width:2px
+    classDef dataClass fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px
+    classDef processClass fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px
+    classDef storageClass fill:#E3F2FD,stroke:#2196F3,stroke-width:2px
+    classDef errorClass fill:#FFCDD2,stroke:#F44336,stroke-width:2px
+    classDef successClass fill:#C8E6C9,stroke:#66BB6A,stroke-width:2px
+    
+    class User,UserClick userClass
+    class FileObj,FrontendState,BuildRequest,ParseQuery,TimeCalc,SASGen,SASParams,SASUrl,Convert,BlobClient dataClass
+    class APIRoute,ValidateParams,DelegationKeyReq,UploadData,ListAPI processClass
+    class DelegationKeyResp,StorageValidate,StoreBlob,StorageResp storageClass
+    class Error1,Error2,Error3 errorClass
+    class Complete successClass
