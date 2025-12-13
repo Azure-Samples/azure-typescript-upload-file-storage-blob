@@ -21,17 +21,33 @@ services:
       context: ../../
 
 hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: |
+        echo "Setting up user principal ID for local development..."
+        PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
+        azd env set AZURE_PRINCIPAL_ID "$PRINCIPAL_ID"
+        echo "User principal ID set: $PRINCIPAL_ID"
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Setting up user principal ID for local development..."
+        $PRINCIPAL_ID = az ad signed-in-user show --query id -o tsv
+        azd env set AZURE_PRINCIPAL_ID "$PRINCIPAL_ID"
+        Write-Host "User principal ID set: $PRINCIPAL_ID"
+
   postprovision:
     posix: 
       sh: bash
       run: |
-        # Get environment values for the application
-        azd env get-values > .env
+        # Get environment values for the application (exclude AZURE_PRINCIPAL_ID - only needed for deployment)
+        azd env get-values | grep -v "AZURE_PRINCIPAL_ID" > .env
         echo "Environment configured. Data will be loaded after deployment."
     windows:
       shell: pwsh
       run: |
-        azd env get-values > .env
+        azd env get-values | Where-Object { $_ -notmatch "AZURE_PRINCIPAL_ID" } | Out-File -FilePath .env -Encoding utf8
         Write-Host "Environment configured. Data will be loaded after deployment."
   
   postdeploy:
@@ -85,3 +101,17 @@ hooks:
           --output none
         
         Write-Host "Both container apps updated successfully"
+
+  postdown:
+    posix:
+      shell: sh
+      run: |
+        echo "Cleaning up environment file..."
+        rm -f .env
+        echo "Environment file removed."
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Cleaning up environment file..."
+        Remove-Item -Path .env -ErrorAction SilentlyContinue
+        Write-Host "Environment file removed."

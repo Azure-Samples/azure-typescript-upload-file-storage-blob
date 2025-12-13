@@ -1,20 +1,18 @@
-version: '3.8'
-
 services:
   api:
     build:
-      context: ./azure-upload-file-to-storage/api
+      context: ./azure-upload-file-storage/api
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
       - Azure_Storage_AccountName=${AZURE_STORAGE_ACCOUNT_NAME}
-      - Azure_Storage_AccountKey=${AZURE_STORAGE_ACCOUNT_KEY}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
       - FRONTEND_URL=http://localhost:8080
       - PORT=3000
     volumes:
-      - ./azure-upload-file-to-storage/api:/app
+      - ./azure-upload-file-storage/api:/app
       - /app/node_modules
     networks:
       - app-network
@@ -27,7 +25,7 @@ services:
   
   web:
     build:
-      context: ./azure-upload-file-to-storage/app
+      context: ./azure-upload-file-storage/app
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=http://localhost:3000

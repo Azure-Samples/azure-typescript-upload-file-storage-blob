@@ -26,7 +26,7 @@ curl http://localhost:3000/health
 NODE_ENV=development                          # development | production
 PORT=3000                                     # Server port
 AZURE_STORAGE_ACCOUNT_NAME=your-storage-name  # REQUIRED
-FRONTEND_URL=http://localhost:8080            # For CORS
+WEB_URL=http://localhost:8080            # For CORS
 ```
 
 ## Key Differences from v1

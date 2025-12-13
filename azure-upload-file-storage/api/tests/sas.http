@@ -1,0 +1,11 @@
+### Generate SAS token for file upload (default 10 minutes)
+GET http://localhost:3000/api/sas?file=test-image.jpg HTTP/1.1
+
+### Generate SAS token with custom time range (30 minutes)
+GET http://localhost:3000/api/sas?file=document.pdf&timerange=30 HTTP/1.1
+
+### Generate SAS token with write permission (default)
+GET http://localhost:3000/api/sas?file=data.json&permission=w HTTP/1.1
+
+### Generate SAS token with explicit container
+GET http://localhost:3000/api/sas?container=upload&file=photo.png&timerange=15 HTTP/1.1

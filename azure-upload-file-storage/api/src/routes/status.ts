@@ -12,7 +12,7 @@ export async function getStatus(
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     storageAccount: process.env.AZURE_STORAGE_ACCOUNT_NAME || 'not configured',
-    frontendUrl: process.env.FRONTEND_URL || 'not configured',
+    frontendUrl: process.env.WEB_URL || 'not configured',
     request: {
       method: request.method,
       url: request.url,

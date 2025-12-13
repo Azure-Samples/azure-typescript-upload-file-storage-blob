@@ -11,7 +11,7 @@ The v2 API uses environment variables instead of `local.settings.json`. This pro
 | `NODE_ENV` | Environment mode | `development` or `production` | No (defaults to development) |
 | `PORT` | Server port | `3000` | No (defaults to 3000) |
 | `AZURE_STORAGE_ACCOUNT_NAME` | Azure Storage account name | `mystorageaccount` | **Yes** |
-| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:8080` | No (defaults to `*`) |
+| `WEB_URL` | Frontend URL for CORS | `http://localhost:8080` | No (defaults to `*`) |
 
 ### Setting Up Local Development
 
@@ -25,7 +25,7 @@ The v2 API uses environment variables instead of `local.settings.json`. This pro
    NODE_ENV=development
    PORT=3000
    AZURE_STORAGE_ACCOUNT_NAME=your-actual-storage-account-name
-   FRONTEND_URL=http://localhost:8080
+   WEB_URL=http://localhost:8080
    ```
 
 3. **Authenticate with Azure CLI** (required for local development):
@@ -59,7 +59,7 @@ In production, environment variables are set via:
        NODE_ENV=production \
        PORT=3000 \
        AZURE_STORAGE_ACCOUNT_NAME=YOUR_STORAGE \
-       FRONTEND_URL=https://your-frontend-url
+       WEB_URL=https://your-frontend-url
    ```
 
 **Important**: No `AZURE_STORAGE_ACCOUNT_KEY` needed! The API uses system-assigned managed identity in production.

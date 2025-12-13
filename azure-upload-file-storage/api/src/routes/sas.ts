@@ -42,6 +42,7 @@ export async function getSasToken(
   }
 
   try {
+    request.log.info({ accountName }, 'Creating BlobServiceClient');
     const blobServiceClient = getBlobServiceClient(accountName);
 
     // IMPORTANT: Always set both startsOn and expiresOn for SAS expiration policy compliance
@@ -55,11 +56,13 @@ export async function getSasToken(
       durationMinutes: timerangeMinutes
     }, 'Token validity period');
 
+    request.log.info('Requesting user delegation key...');
     // Get user delegation key (Microsoft Entra ID-based, not account key)
     const userDelegationKey = await blobServiceClient.getUserDelegationKey(
       startsOn,
       expiresOn
     );
+    request.log.info('User delegation key obtained successfully');
 
     // Generate SAS token using user delegation key
     const containerClient = blobServiceClient.getContainerClient(container);

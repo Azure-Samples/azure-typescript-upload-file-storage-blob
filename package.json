@@ -1,0 +1,31 @@
+{
+  "name": "azure-typescript-upload-file-storage-blob",
+  "version": "1.0.0",
+  "description": "Modern file upload application with Fastify API backend and React frontend, deployed to Azure Container Apps and Static Web Apps.",
+  "homepage": "https://github.com/diberry/azure-typescript-upload-file-storage-blob#readme",
+  "bugs": {
+    "url": "https://github.com/diberry/azure-typescript-upload-file-storage-blob/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diberry/azure-typescript-upload-file-storage-blob.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "workspaces": [
+    "azure-upload-file-storage/api",
+    "azure-upload-file-storage/app"
+  ],
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docker:up": "docker compose --env-file .env up --build",
+    "docker:down": "docker compose down",
+    "start:api": "npm start --workspace=azure-upload-file-storage/api",
+    "start:app": "npm start --workspace=azure-upload-file-storage/app"
+  }
+}

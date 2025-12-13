@@ -28,7 +28,7 @@ This document shows how to migrate from v1 (Azure Functions with keys) to v2 (Fa
 NODE_ENV=development
 PORT=3000
 AZURE_STORAGE_ACCOUNT_NAME=mystorageaccount
-FRONTEND_URL=http://localhost:8080
+WEB_URL=http://localhost:8080
 ```
 
 ## Environment Variable Mapping
@@ -40,7 +40,7 @@ FRONTEND_URL=http://localhost:8080
 | `Azure_Storage_AccountName` | `AZURE_STORAGE_ACCOUNT_NAME` | Renamed for consistency |
 | `Azure_Storage_AccountKey` | ❌ **REMOVED** | **Uses managed identity instead** |
 | `Host.LocalHttpPort` | `PORT` | Standardized to `PORT` |
-| `Host.CORS` | `FRONTEND_URL` | More explicit CORS configuration |
+| `Host.CORS` | `WEB_URL` | More explicit CORS configuration |
 | N/A | `NODE_ENV` | New - for environment detection |
 
 ## Security Improvements

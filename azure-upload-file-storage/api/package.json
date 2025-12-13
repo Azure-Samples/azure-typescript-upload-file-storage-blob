@@ -5,12 +5,12 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "start": "node dist/server.js",
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
+    "start": "node --env-file=../../.env dist/server.js",
     "build": "tsc",
     "clean": "rimraf dist",
-    "format": "prettier --write \"src/**/*.ts\" \"server.ts\"",
-    "lint": "eslint src/**/*.ts server.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint src/**/*.ts --fix",
     "test": "echo \"No tests yet...\""
   },
   "engines": {

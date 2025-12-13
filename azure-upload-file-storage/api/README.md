@@ -39,7 +39,7 @@ This is the v2 API using Fastify instead of Azure Functions, with managed identi
 - `NODE_ENV` - Environment (development/production)
 - `PORT` - Server port (default: 3000)
 - `AZURE_STORAGE_ACCOUNT_NAME` - Azure Storage account name (required)
-- `FRONTEND_URL` - Frontend URL for CORS (default: *)
+- `WEB_URL` - Frontend URL for CORS (default: *)
 
 **Note**: No storage account keys required! Uses DefaultAzureCredential.
 

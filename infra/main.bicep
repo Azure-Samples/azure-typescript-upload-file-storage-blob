@@ -14,6 +14,7 @@ var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
 var prefix = '${environmentName}${resourceToken}'
+
 var principalType = 'User'
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
@@ -70,6 +71,10 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
     kind: 'StorageV2'
     skuName: 'Standard_LRS'
     allowBlobPublicAccess: true
+    networkAcls: {
+      defaultAction: 'Allow'  // Initially open, postprovision hook will lock it down with your IP
+      bypass: 'AzureServices'
+    }
     roleAssignments: [
       {
         principalId: managedIdentity.outputs.principalId
@@ -80,16 +85,6 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionIdOrName: 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a' // Storage Blob Delegator
         principalType: 'ServicePrincipal'
-      }
-      {
-        principalId: principalId
-        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
-        principalType: principalType
-      }
-      {
-        principalId: principalId
-        roleDefinitionIdOrName: 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a' // Storage Blob Delegator
-        principalType: principalType
       }
     ]
     blobServices: {
@@ -127,11 +122,6 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.3' =
         principalId: managedIdentity.outputs.principalId
         roleDefinitionIdOrName: '7f951dda-4ed3-4680-a7ca-43fe172d538d' // AcrPull
         principalType: 'ServicePrincipal'
-      }      
-      {
-        principalId:principalId
-        roleDefinitionIdOrName: '7f951dda-4ed3-4680-a7ca-43fe172d538d' // AcrPull
-        principalType: principalType
       }
     ]
   }
@@ -176,10 +166,10 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
             value: 'production'
           }
           {
-            name: 'Azure_Storage_AccountName'
+            name: 'AZURE_STORAGE_ACCOUNT_NAME'
             value: storage.outputs.name
           }
-                    {
+          {
             name: 'AZURE_CLIENT_ID'
             value: managedIdentity.outputs.clientId
           }
@@ -287,6 +277,40 @@ module webContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
         identity: managedIdentity.outputs.resourceId
       }
     ]
+  }
+}
+
+// User role assignments (conditional - only if principalId is provided)
+module userStorageBlobContributorRole 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = if (!empty(principalId)) {
+  name: 'userStorageBlobContributor'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe') // Storage Blob Data Contributor
+    resourceId: storage.outputs.resourceId
+    principalType: principalType
+  }
+}
+
+module userStorageBlobDelegatorRole 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = if (!empty(principalId)) {
+  name: 'userStorageBlobDelegator'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a') // Storage Blob Delegator
+    resourceId: storage.outputs.resourceId
+    principalType: principalType
+  }
+}
+
+module userAcrPullRole 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = if (!empty(principalId)) {
+  name: 'userAcrPull'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    resourceId: containerRegistry.outputs.resourceId
+    principalType: principalType
   }
 }
 

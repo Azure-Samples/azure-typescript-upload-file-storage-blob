@@ -7,7 +7,7 @@ let _credential: DefaultAzureCredential | null = null;
  * Get a singleton instance of DefaultAzureCredential
  * This credential automatically detects the environment:
  * - Local dev: Uses Azure CLI credentials (from az login)
- * - Container Apps: Uses system-assigned managed identity
+ * - Container Apps: Uses user-assigned managed identity (via AZURE_CLIENT_ID env var)
  */
 export function getCredential(): DefaultAzureCredential {
   if (!_credential) {

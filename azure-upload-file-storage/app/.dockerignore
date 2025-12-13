@@ -12,10 +12,10 @@ pnpm-lock.yaml
 # Note: dist/ is created during Docker build and needed for nginx
 # dist/
 
-# Source files (not needed after build)
-src/
-public/
-!public/vite.svg
+# Source files (NEEDED DURING BUILD, excluded from final image via multi-stage)
+# src/
+# public/
+# !public/vite.svg
 
 # Environment files
 .env
@@ -59,9 +59,9 @@ coverage/
 __tests__/
 
 # Build tools config (not needed in container)
-tsconfig.json
-tsconfig.*.json
-vite.config*.ts
+# tsconfig.json - NEEDED FOR BUILD
+# tsconfig.*.json - NEEDED FOR BUILD
+# vite.config*.ts - NEEDED FOR BUILD
 eslint.config.*
 .eslintrc*
 .prettierrc*

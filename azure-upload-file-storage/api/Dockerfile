@@ -4,8 +4,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Copy package files from api directory
-COPY azure-upload-file-storage/api/package*.json ./
-COPY azure-upload-file-storage/api/tsconfig.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.npm \
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm install
 
 # Copy source code from api directory
-COPY azure-upload-file-storage/api/ .
+COPY . .
 
 # Build TypeScript
 RUN npm run build

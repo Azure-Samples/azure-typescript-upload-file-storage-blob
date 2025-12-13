@@ -4,8 +4,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Copy package files from app directory
-COPY azure-upload-file-storage/app/package*.json ./
-COPY azure-upload-file-storage/app/tsconfig.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.npm \
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm install
 
 # Copy source code from app directory
-COPY azure-upload-file-storage/app/ .
+COPY . .
 
 # Build the React app
 RUN npm run build
@@ -30,7 +30,7 @@ FROM node:24-alpine
 RUN apk add --no-cache nginx
 
 # Copy custom nginx config from app directory
-COPY azure-upload-file-storage/app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built static files
 COPY --from=builder /app/dist /usr/share/nginx/html
