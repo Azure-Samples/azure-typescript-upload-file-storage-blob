@@ -1,17 +1,26 @@
 import { BlobServiceClient } from '@azure/storage-blob';
-import { DefaultAzureCredential } from '@azure/identity';
+import { ChainedTokenCredential, ManagedIdentityCredential, AzureCliCredential } from '@azure/identity';
 
-let _credential: DefaultAzureCredential | null = null;
+let _credential: ChainedTokenCredential | null = null;
 
 /**
- * Get a singleton instance of DefaultAzureCredential
- * This credential automatically detects the environment:
- * - Local dev: Uses Azure CLI credentials (from az login)
- * - Container Apps: Uses user-assigned managed identity (via AZURE_CLIENT_ID env var)
+ * Get a singleton instance of Azure credential
+ * Uses ChainedTokenCredential to try authentication methods in order:
+ * 1. ManagedIdentityCredential (for Azure Container Apps) - tries first
+ * 2. AzureCliCredential (for local development with az login) - falls back
  */
-export function getCredential(): DefaultAzureCredential {
+export function getCredential(): ChainedTokenCredential {
   if (!_credential) {
-    _credential = new DefaultAzureCredential();
+    const clientId = process.env.AZURE_CLIENT_ID;
+    
+    // Create credential chain with ManagedIdentity first
+    const credentials = [
+      new ManagedIdentityCredential(clientId ? { clientId } : undefined),
+      new AzureCliCredential()
+    ];
+    
+    _credential = new ChainedTokenCredential(...credentials);
+    console.log(`🔑 Using ChainedTokenCredential (ManagedIdentity → AzureCLI)${clientId ? ` with client ID: ${clientId}` : ''}`);
   }
   return _credential;
 }

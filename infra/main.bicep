@@ -88,6 +88,11 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
         roleDefinitionIdOrName: 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a' // Storage Blob Delegator
         principalType: 'ServicePrincipal'
       }
+      {
+        principalId: managedIdentity.outputs.principalId
+        roleDefinitionIdOrName: 'acdd72a7-3385-48ef-bd42-f606fba81ae7' // Reader (for service properties)
+        principalType: 'ServicePrincipal'
+      }
     ]
     blobServices: {
       containers: [
@@ -147,7 +152,7 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
   name: 'apiApp'
   scope: rg
   dependsOn: [
-    storage  // Ensure storage and RBAC assignments are complete before deploying the app
+    storage  // Ensure storage and its role assignments are complete before deploying the container
   ]
   params: {
     name: 'api-${resourceToken}'
@@ -171,12 +176,20 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
             value: 'production'
           }
           {
+            name: 'PORT'
+            value: '3000'
+          }
+          {
             name: 'AZURE_STORAGE_ACCOUNT_NAME'
             value: storage.outputs.name
           }
           {
             name: 'AZURE_CLIENT_ID'
             value: managedIdentity.outputs.clientId
+          }
+          {
+            name: 'FRONTEND_URL'
+            value: 'https://${webContainerApp.outputs.fqdn}'
           }
         ]
         // probes: [
@@ -208,7 +221,16 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     ingressTargetPort: 3000
     ingressExternal: true
     ingressTransport: 'http'
-    scaleMinReplicas: 0
+    ingressAllowInsecure: false
+    corsPolicy: {
+      allowedOrigins: [
+        'https://${webContainerApp.outputs.fqdn}'
+      ]
+      allowedMethods: ['*']
+      allowedHeaders: ['*']
+      allowCredentials: true
+    }
+    scaleMinReplicas: 1
     scaleMaxReplicas: 1
     registries: [
       {
@@ -222,7 +244,7 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
 // Web/Frontend Container App
 // Provision overwrites the image so must - just change with config with azd provision
 // deploy (package + deploy) to deploy image
-// avm: container app upsert - https://github.com/Azure-Samples/todo-nodejs-mongo-aca
+// avm: consider using container app upsert found in https://github.com/Azure-Samples/todo-nodejs-mongo-aca
 module webContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
   name: 'webApp'
   scope: rg
@@ -278,7 +300,7 @@ module webContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     ingressExternal: true
     ingressTransport: 'http'
     scaleMinReplicas: 1
-    scaleMaxReplicas: 3
+    scaleMaxReplicas: 1
     registries: [
       {
         server: containerRegistry.outputs.loginServer

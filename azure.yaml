@@ -7,8 +7,8 @@ workflows:
   up: 
     steps:
       - azd: provision
-      # - azd: package # automatically added by deploy
-      - azd: deploy --all
+      - azd: deploy api
+      - azd: deploy app
 
 # alphabetic ordering of packaging
 services:
@@ -27,6 +27,8 @@ services:
     docker:
       path: ./Dockerfile
       context: ./
+      buildArgs:
+        - "VITE_API_URL=${API_URL}"
 
 hooks:
   preprovision:
@@ -95,14 +97,6 @@ hooks:
           --set-env-vars "FRONTEND_URL=$WEB_URL" \
           --output none
         
-        # Update frontend with API URL
-        echo "Updating frontend with VITE_API_URL..."
-        az containerapp update \
-          --name "$WEB_NAME" \
-          --resource-group "$RESOURCE_GROUP" \
-          --set-env-vars "VITE_API_URL=$API_URL" \
-          --output none
-        
         echo ""
         echo "🎉 Deployment complete!"
         echo ""
@@ -140,14 +134,6 @@ hooks:
           --name "$API_NAME" `
           --resource-group "$RESOURCE_GROUP" `
           --set-env-vars "FRONTEND_URL=$WEB_URL" `
-          --output none
-        
-        # Update frontend with API URL
-        Write-Host "Updating frontend with VITE_API_URL..."
-        az containerapp update `
-          --name "$WEB_NAME" `
-          --resource-group "$RESOURCE_GROUP" `
-          --set-env-vars "VITE_API_URL=$API_URL" `
           --output none
         
         Write-Host ""

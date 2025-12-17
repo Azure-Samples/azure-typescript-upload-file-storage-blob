@@ -1,6 +1,10 @@
 # Build stage
 FROM node:24-alpine AS builder
 
+# Accept build argument for API URL
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
 WORKDIR /app
 
 # Copy package files from app directory
@@ -16,7 +20,10 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy source code from app directory
 COPY . .
 
-# Build the React app
+# Verify API URL before building
+RUN echo "🔍 Building with VITE_API_URL: ${VITE_API_URL}"
+
+# Build the React app with injected API URL
 RUN npm run build
 
 # Prune dev dependencies
@@ -28,10 +35,9 @@ FROM node:24-alpine
 # Install nginx
 RUN apk add --no-cache nginx
 
-# Copy custom nginx config from app directory
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-RUN echo "app"
+# Remove default nginx config and copy our custom config
+RUN rm -f /etc/nginx/http.d/default.conf
+COPY nginx.conf /etc/nginx/http.d/default.conf
 
 # Copy built static files
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -41,7 +47,7 @@ RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
     chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d && \
+    chown -R nginx:nginx /etc/nginx/http.d && \
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 

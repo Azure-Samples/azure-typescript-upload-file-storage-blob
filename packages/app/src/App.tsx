@@ -9,6 +9,9 @@ import './App.css';
 // API URL from environment variable (supports both local and production)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('API_URL:', API_URL);
+
 type SasResponse = {
   url: string;
 };
@@ -52,6 +55,8 @@ function App() {
       selectedFile.name
     )}&permission=${permission}&container=${containerName}&timerange=${timerange}`;
 
+    console.log('GET SAS URL:', url);
+
     fetch(url, {
       method: 'GET',
       headers: {
@@ -79,34 +84,57 @@ function App() {
   };
 
   const handleFileUpload = () => {
-    if (sasTokenUrl === '') return;
+    if (sasTokenUrl === '') {
+      console.log('Upload aborted: No SAS token URL');
+      return;
+    }
+
+    console.log('Starting upload process...');
+    console.log('Selected file:', selectedFile?.name, 'Size:', selectedFile?.size);
+    console.log('SAS Token URL:', sasTokenUrl);
 
     convertFileToArrayBuffer(selectedFile as File)
       .then((fileArrayBuffer) => {
-        if (
-          fileArrayBuffer === null ||
-          fileArrayBuffer.byteLength < 1 ||
-          fileArrayBuffer.byteLength > 256000
-        )
-          return;
+        console.log('File converted to ArrayBuffer, size:', fileArrayBuffer?.byteLength);
+        
+        if (fileArrayBuffer === null || fileArrayBuffer.byteLength < 1) {
+          throw new Error('Failed to convert file to ArrayBuffer');
+        }
 
+        // Removed arbitrary 256KB limit - Azure Blob Storage supports much larger files
+        console.log('Creating BlockBlobClient...');
         const blockBlobClient = new BlockBlobClient(sasTokenUrl);
+        console.log('Uploading data to Azure Storage...');
         return blockBlobClient.uploadData(fileArrayBuffer);
       })
-      .then(() => {
+      .then((uploadResponse) => {
+        console.log('Upload response:', uploadResponse);
+        if (!uploadResponse) {
+          throw new Error('Upload failed - no response from Azure Storage');
+        }
         setUploadStatus('Successfully finished upload');
-        return fetch(`${API_URL}/api/list?container=${containerName}`);
+        
+        const listUrl = `${API_URL}/api/list?container=${containerName}`;
+        console.log('Fetching blob list from:', listUrl);
+        return fetch(listUrl);
       })
       .then((response) => {
+        console.log('List response status:', response?.status);
+        if (!response) {
+          console.error('No response from list API');
+          return;
+        }
         if (!response.ok) {
           throw new Error(`Error: ${response.status} ${response.statusText} - URL: ${response.url}`);
         }
         return response.json();
       })
       .then((data: ListResponse) => {
+        console.log('Blob list received:', data);
         setList(data.list);
       })
       .catch((error: unknown) => {
+        console.error('Upload error:', error);
         if (error instanceof Error) {
           const { message, stack } = error;
           setUploadStatus(
@@ -196,22 +224,29 @@ function App() {
 
           {/* Uploaded Files Display */}
           <Grid container spacing={2}>
-            {list.map((item) => (
-              <Grid item xs={6} sm={4} md={3} key={item}>
-                <Card>
-                  {item.endsWith('.jpg') ||
-                  item.endsWith('.png') ||
-                  item.endsWith('.jpeg') ||
-                  item.endsWith('.gif') ? (
-                    <CardMedia component="img" image={item} alt={item} />
-                  ) : (
-                    <Typography variant="body1" gutterBottom>
-                      {item}
-                    </Typography>
-                  )}
-                </Card>
-              </Grid>
-            ))}
+            {list.map((item) => {
+              // Extract filename from URL (before query parameters)
+              const urlWithoutQuery = item.split('?')[0];
+              const filename = urlWithoutQuery.split('/').pop() || '';
+              const isImage = filename.endsWith('.jpg') ||
+                              filename.endsWith('.png') ||
+                              filename.endsWith('.jpeg') ||
+                              filename.endsWith('.gif');
+              
+              return (
+                <Grid item xs={6} sm={4} md={3} key={item}>
+                  <Card>
+                    {isImage ? (
+                      <CardMedia component="img" image={item} alt={filename} />
+                    ) : (
+                      <Typography variant="body1" gutterBottom>
+                        {filename}
+                      </Typography>
+                    )}
+                  </Card>
+                </Grid>
+              );
+            })}
           </Grid>
         </Box>
       </ErrorBoundary>

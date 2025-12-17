@@ -56,15 +56,8 @@ const start = async () => {
         console.error('\n💡 Required Azure RBAC roles:');
         console.error('   - Storage Blob Data Contributor');
         console.error('   - Storage Blob Delegator');
-        console.error('\n   Run: azd provision (to assign roles automatically)');
-        console.error('   Or wait 5-10 minutes if roles were just assigned.\n');
-        
-        // Don't exit in development mode to allow debugging
-        if (process.env.NODE_ENV === 'production') {
-          process.exit(1);
-        } else {
-          console.warn('⚠️  Continuing in development mode despite permission issues...\n');
-        }
+        console.error('\n⚠️  Server will start but storage operations may fail until permissions are ready.');
+        console.error('   RBAC propagation can take 5-10 minutes after deployment.\n');
       }
     } else {
       console.warn('⚠️  AZURE_STORAGE_ACCOUNT_NAME not set, skipping permission verification\n');

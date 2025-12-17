@@ -29,9 +29,6 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV PORT=3000
-
 RUN echo "api"
 
 # Copy built application

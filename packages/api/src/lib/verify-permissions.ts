@@ -16,15 +16,36 @@ export async function verifyStoragePermissions(accountName: string): Promise<{
     
     // Test 1: Can we get service properties? (requires read access)
     console.log('  ✓ Testing storage account access...');
-    try {
-      await blobServiceClient.getProperties();
-      console.log('  ✓ Storage account access: OK');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('  ✗ Storage account access: FAILED');
+    let retries = 3;
+    let lastError: any;
+    
+    while (retries > 0) {
+      try {
+        await blobServiceClient.getProperties();
+        console.log('  ✓ Storage account access: OK');
+        break;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`  ⚠️  Error details: ${JSON.stringify({
+          message: error.message,
+          statusCode: error.statusCode,
+          code: error.code,
+          name: error.name
+        })}`);
+        retries--;
+        if (retries > 0) {
+          console.log(`  ⏳ Retrying... (${retries} attempts remaining)`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        }
+      }
+    }
+    
+    if (retries === 0) {
+      const message = lastError instanceof Error ? lastError.message : 'Unknown error';
+      console.error('  ✗ Storage account access: FAILED after retries');
       return {
         success: false,
-        message: 'Cannot access storage account. Check if AZURE_STORAGE_ACCOUNT_NAME is correct.',
+        message: 'Cannot access storage account. RBAC roles may need time to propagate (5-10 minutes).',
         details: message
       };
     }

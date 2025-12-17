@@ -11,7 +11,8 @@
     "clean": "rimraf dist",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint src/**/*.ts --fix",
-    "test": "echo \"No tests yet...\""
+    "test": "echo \"No tests yet...\"",
+    "test:storage": "tsx --env-file=../../.env src/scripts/test-storage-access.ts"
   },
   "engines": {
     "node": ">=22.0.0"
