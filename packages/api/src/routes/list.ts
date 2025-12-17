@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { BlobSASPermissions, generateBlobSASQueryParameters } from '@azure/storage-blob';
 import { getBlobServiceClient } from '../lib/azure-storage.js';
 
 interface ListQueryParams {
@@ -6,7 +7,7 @@ interface ListQueryParams {
 }
 
 /**
- * List all files in a container using managed identity
+ * List all files in a container with read SAS tokens
  */
 export async function listFiles(
   request: FastifyRequest<{ Querystring: ListQueryParams }>,
@@ -28,17 +29,42 @@ export async function listFiles(
     const blobServiceClient = getBlobServiceClient(accountName);
     const containerClient = blobServiceClient.getContainerClient(container);
 
+    // Get user delegation key for SAS tokens (valid for 1 hour)
+    const startsOn = new Date();
+    const expiresOn = new Date(startsOn.valueOf() + 60 * 60 * 1000); // 1 hour
+    
+    request.log.info('Requesting user delegation key for read SAS tokens...');
+    const userDelegationKey = await blobServiceClient.getUserDelegationKey(
+      startsOn,
+      expiresOn
+    );
+
     const fileList: string[] = [];
 
     // List blobs with pagination
     for await (const response of containerClient.listBlobsFlat().byPage({ maxPageSize: 20 })) {
       for (const blob of response.segment.blobItems) {
-        const blobUrl = `${containerClient.url}/${blob.name}`;
-        fileList.push(blobUrl);
+        const blobClient = containerClient.getBlobClient(blob.name);
+        
+        // Generate read SAS token for each blob
+        const sasToken = generateBlobSASQueryParameters(
+          {
+            containerName: container,
+            blobName: blob.name,
+            permissions: BlobSASPermissions.parse('r'), // read permission
+            startsOn,
+            expiresOn
+          },
+          userDelegationKey,
+          accountName
+        ).toString();
+
+        const sasUrl = `${blobClient.url}?${sasToken}`;
+        fileList.push(sasUrl);
       }
     }
 
-    request.log.info({ count: fileList.length }, 'Retrieved file list');
+    request.log.info({ count: fileList.length }, 'Retrieved file list with SAS tokens');
 
     return reply.send({
       list: fileList
