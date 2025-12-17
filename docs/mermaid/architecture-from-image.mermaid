@@ -1,0 +1,29 @@
+graph LR
+    User[👤 User]
+    Frontend[🌐 Web App<br/>Frontend]
+    Backend[⚙️ API App<br/>Backend]
+    ManagedIdentity[🔐 Managed<br/>Identity]
+    Registry[🐋 Container<br/>Registry]
+    Storage[🗄️ Storage<br/>Blob Container]
+
+    User -->|1. Access| Frontend
+    Frontend -->|2. API Call| Backend
+    Backend -->|3. Upload/List| Storage
+    
+    ManagedIdentity -.->|Auth| Frontend
+    ManagedIdentity -.->|Auth| Backend
+    ManagedIdentity -.->|Images| Registry
+    Registry -.->|Images| Frontend
+    Registry -.->|Images| Backend
+
+    classDef userStyle fill:#8B5A9F,stroke:#333,stroke-width:2px,color:#fff
+    classDef appStyle fill:#0078D4,stroke:#333,stroke-width:2px,color:#fff
+    classDef identityStyle fill:#00B294,stroke:#333,stroke-width:2px,color:#fff
+    classDef registryStyle fill:#50E6FF,stroke:#333,stroke-width:2px,color:#000
+    classDef storageStyle fill:#50E6FF,stroke:#333,stroke-width:2px,color:#000
+
+    class User userStyle
+    class Frontend,Backend appStyle
+    class ManagedIdentity identityStyle
+    class Registry registryStyle
+    class Storage storageStyle
