@@ -148,3 +148,25 @@ hooks:
         Write-Host "  2. Test file upload"
         Write-Host "  3. View logs: azd logs"
         Write-Host ""
+
+  postdown:
+    posix:
+      shell: sh
+      run: |
+        echo "🧹 Cleaning up environment files..."
+        if [ -f .env ]; then
+          rm .env
+          echo "Deleted .env file"
+        else
+          echo "No .env file to delete"
+        fi
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "🧹 Cleaning up environment files..."
+        if (Test-Path .env) {
+          Remove-Item .env
+          Write-Host "Deleted .env file"
+        } else {
+          Write-Host "No .env file to delete"
+        }
