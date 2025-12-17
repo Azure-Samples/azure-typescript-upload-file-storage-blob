@@ -2,6 +2,8 @@
 
 Modern file upload application with secure, keyless Azure Blob Storage integration.
 
+![Demo](docs/demo.gif)
+
 ## 🚀 Get Started in 2 Minutes
 
 ### 1. Open in GitHub Codespaces
@@ -11,14 +13,19 @@ Click the **Code** button above → **Codespaces** → **Create codespace on mai
 ### 2. Login to Azure
 
 ```bash
-azd auth login
+az login  
+azd config set auth.useAzCliAuth true
 ```
+
+Set up AZD to use Azure CLI auth. 
 
 ### 3. Deploy Everything
 
 ```bash
 azd up
 ```
+
+The deployment can take up to 10 minutes.
 
 That's it! The command creates all Azure resources, configures security, and deploys your application to Azure.
 
