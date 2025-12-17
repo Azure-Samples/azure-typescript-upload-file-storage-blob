@@ -241,7 +241,7 @@ az login
 az account show
 
 # 2. Start server
-cd azure-upload-file-storage/api
+cd packages/api
 npm run dev
 
 # 3. Generate SAS token

@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Copy package files from api directory
 COPY package*.json ./
-COPY tsconfig.json ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.npm \
@@ -32,6 +31,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+
+RUN echo "api"
 
 # Copy built application
 COPY --from=builder /app/package*.json ./

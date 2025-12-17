@@ -1,5 +1,5 @@
 {
-  "name": "azure-upload-file-storage",
+  "name": "packages",
   "version": "2.0.0",
   "private": true,
   "description": "Azure file upload application with Fastify API and React frontend",
@@ -59,7 +59,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/azure-upload-file-storage"
+    "url": "https://github.com/your-org/packages"
   },
   "keywords": [
     "azure",

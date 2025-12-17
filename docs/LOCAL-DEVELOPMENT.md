@@ -10,11 +10,11 @@ Test the frontend UI without connecting to Azure:
 
 ```bash
 # Terminal 1 - Start API in demo mode (no Azure)
-cd azure-upload-file-storage/api
+cd packages/api
 npm run dev
 
 # Terminal 2 - Start Frontend
-cd azure-upload-file-storage/app
+cd packages/app
 npm run dev
 
 # Open: http://localhost:5173
@@ -31,11 +31,11 @@ Test the complete upload flow:
 az login
 
 # 2. Terminal 1 - Start API
-cd azure-upload-file-storage/api
+cd packages/api
 npm run dev
 
 # 3. Terminal 2 - Start Frontend  
-cd azure-upload-file-storage/app
+cd packages/app
 npm run dev
 
 # Open: http://localhost:5173
@@ -46,7 +46,7 @@ npm run dev
 Run both services from the root:
 
 ```bash
-# From azure-upload-file-storage/ directory
+# From packages/ directory
 
 # Install dependencies
 npm install
@@ -137,7 +137,7 @@ You can develop and test the frontend **without** Azure credentials:
    az login
    
    # Start both services
-   cd azure-upload-file-storage
+   cd packages
    npm run dev
    ```
 

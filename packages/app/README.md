@@ -20,7 +20,7 @@ This is the v2 frontend application built with React, Vite, and Material-UI. It 
 ### 1. Install Dependencies
 
 ```bash
-cd azure-upload-file-storage/app
+cd packages/app
 npm install
 ```
 

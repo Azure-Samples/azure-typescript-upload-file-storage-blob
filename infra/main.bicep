@@ -70,7 +70,9 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
     tags: tags
     kind: 'StorageV2'
     skuName: 'Standard_LRS'
-    allowBlobPublicAccess: true
+    allowBlobPublicAccess: false  // Use RBAC and SAS tokens instead
+    allowSharedKeyAccess: true     // Needed for some operations
+    publicNetworkAccess: 'Enabled'
     networkAcls: {
       defaultAction: 'Allow'  // Initially open, postprovision hook will lock it down with your IP
       bypass: 'AzureServices'
@@ -91,7 +93,7 @@ module storage 'br/public:avm/res/storage/storage-account:0.30.0' = {
       containers: [
         {
           name: 'upload'
-          publicAccess: 'Blob'
+          publicAccess: 'None'  // Use SAS tokens for access
         }
       ]
       corsRules: [
@@ -144,6 +146,9 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.8.1
 module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
   name: 'apiApp'
   scope: rg
+  dependsOn: [
+    storage  // Ensure storage and RBAC assignments are complete before deploying the app
+  ]
   params: {
     name: 'api-${resourceToken}'
     location: location
@@ -215,6 +220,9 @@ module apiContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
 }
 
 // Web/Frontend Container App
+// Provision overwrites the image so must - just change with config with azd provision
+// deploy (package + deploy) to deploy image
+// avm: container app upsert - https://github.com/Azure-Samples/todo-nodejs-mongo-aca
 module webContainerApp 'br/public:avm/res/app/container-app:0.11.0' = {
   name: 'webApp'
   scope: rg
@@ -329,6 +337,7 @@ output AZURE_CONTAINER_APP_API_NAME string = apiContainerApp.outputs.name
 output AZURE_CONTAINER_APP_WEB_NAME string = webContainerApp.outputs.name
 
 output API_URL string = 'https://${apiContainerApp.outputs.fqdn}'
+output VITE_API_URL string = 'https://${apiContainerApp.outputs.fqdn}'
 output WEB_URL string = 'https://${webContainerApp.outputs.fqdn}'
 
 // Storage Account

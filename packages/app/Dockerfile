@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Copy package files from app directory
 COPY package*.json ./
-COPY tsconfig.json ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.npm \
@@ -31,6 +30,8 @@ RUN apk add --no-cache nginx
 
 # Copy custom nginx config from app directory
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+RUN echo "app"
 
 # Copy built static files
 COPY --from=builder /app/dist /usr/share/nginx/html

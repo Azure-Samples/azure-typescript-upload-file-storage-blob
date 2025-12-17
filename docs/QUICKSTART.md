@@ -75,7 +75,7 @@ npm run install:all
 ## Workspace Structure
 
 ```
-azure-upload-file-storage/
+packages/
 ├── package.json          ← Root workspace (you are here)
 ├── api/                  ← API workspace
 │   └── package.json
@@ -139,7 +139,7 @@ npm run logs             # View production logs
 ### Command not found?
 Make sure you're in the root directory:
 ```bash
-cd /workspaces/file-upload/azure-upload-file-storage
+cd /workspaces/file-upload/packages
 ```
 
 ### Dependencies missing?
@@ -179,10 +179,10 @@ cd ../app && cp .env.sample .env
 
 ## Documentation
 
-- **[README.md](./azure-upload-file-storage/README.md)** - Full workspace documentation
-- **[DEPLOYMENT.md](./azure-upload-file-storage/DEPLOYMENT.md)** - Azure deployment guide
-- **[api/README.md](./azure-upload-file-storage/api/README.md)** - API documentation
-- **[app/README.md](./azure-upload-file-storage/app/README.md)** - Frontend documentation
+- **[README.md](../packages/README.md)** - Full workspace documentation
+- **[DEPLOYMENT.md](../packages/DEPLOYMENT.md)** - Azure deployment guide
+- **[api/README.md](../packages/api/README.md)** - API documentation
+- **[app/README.md](../packages/app/README.md)** - Frontend documentation
 
 ## Tips
 

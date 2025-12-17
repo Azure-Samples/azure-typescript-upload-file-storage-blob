@@ -15,17 +15,17 @@
   "type": "module",
   "main": "index.js",
   "workspaces": [
-    "azure-upload-file-storage/api",
-    "azure-upload-file-storage/app"
+    "packages/*"
   ],
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run build --workspaces --if-present",
     "docker:up": "docker compose --env-file .env up --build",
     "docker:down": "docker compose down",
-    "start:api": "npm start --workspace=azure-upload-file-storage/api",
-    "start:app": "npm start --workspace=azure-upload-file-storage/app"
+    "start:api": "npm start --workspace=packages/api",
+    "start:app": "npm start --workspace=packages/app"
   }
 }

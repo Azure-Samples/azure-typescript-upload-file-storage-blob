@@ -1,12 +1,12 @@
 # Azure Developer CLI configuration for v2 deployment
-name: azure-upload-file-storage
+name: packages
 metadata:
-  template: azure-upload-file-storage@2.0.0
+  template: packages@2.0.0
   description: Modern file upload application with managed identity and user delegation SAS tokens
 
 services:
   api:
-    project: ./azure-upload-file-storage/api
+    project: ./packages/api
     language: js
     host: containerapp
     docker:
@@ -23,7 +23,7 @@ services:
         value: $(WEB_URL)
 
   web:
-    project: ./azure-upload-file-storage/app
+    project: ./packages/app
     language: js
     host: staticwebapp
     dist: dist

@@ -1,117 +1,164 @@
-name: azure-upload-file-to-storage
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: azure-typescript-upload-file-storage-blob
 metadata:
-  template: azure-upload-file-to-storage@1.0.0
+  template: azd-init@1.22.2
 
+workflows:
+  up: 
+    steps:
+      - azd: provision
+      # - azd: package # automatically added by deploy
+      - azd: deploy --all
+
+# alphabetic ordering of packaging
 services:
   api:
-    project: ./azure-upload-file-storage/api
-    language: ts
+    project: ./packages/api
     host: containerapp
-    resourceName: ${AZURE_CONTAINER_APP_API_NAME}
+    language: ts
     docker:
       path: ./Dockerfile
-      context: ../../
+      context: ./
+  
   app:
-    project: ./azure-upload-file-storage/app
-    language: ts
+    project: ./packages/app
     host: containerapp
-    resourceName: ${AZURE_CONTAINER_APP_WEB_NAME}
+    language: ts
     docker:
       path: ./Dockerfile
-      context: ../../
+      context: ./
 
 hooks:
   preprovision:
     posix:
       shell: sh
       run: |
-        echo "Setting up user principal ID for local development..."
+        echo "🚀 Getting Azure principal ID for RBAC assignments..."
         PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
         azd env set AZURE_PRINCIPAL_ID "$PRINCIPAL_ID"
-        echo "User principal ID set: $PRINCIPAL_ID"
+        echo "Principal ID set: $PRINCIPAL_ID"
     windows:
       shell: pwsh
       run: |
-        Write-Host "Setting up user principal ID for local development..."
+        Write-Host "🚀 Getting Azure principal ID for RBAC assignments..."
         $PRINCIPAL_ID = az ad signed-in-user show --query id -o tsv
         azd env set AZURE_PRINCIPAL_ID "$PRINCIPAL_ID"
-        Write-Host "User principal ID set: $PRINCIPAL_ID"
+        Write-Host "Principal ID set: $PRINCIPAL_ID"
 
   postprovision:
-    posix: 
-      sh: bash
+    posix:
+      shell: sh
       run: |
-        # Get environment values for the application (exclude AZURE_PRINCIPAL_ID - only needed for deployment)
-        azd env get-values | grep -v "AZURE_PRINCIPAL_ID" > .env
-        echo "Environment configured. Data will be loaded after deployment."
+        echo "📝 Configuring environment..."
+        azd env get-values > .env
+        echo "Environment file created"
+        
+        echo "⏳ Waiting 30 seconds for RBAC role propagation..."
+        sleep 30
+        echo "✅ Ready for deployment"
     windows:
       shell: pwsh
       run: |
-        azd env get-values | Where-Object { $_ -notmatch "AZURE_PRINCIPAL_ID" } | Out-File -FilePath .env -Encoding utf8
-        Write-Host "Environment configured. Data will be loaded after deployment."
-  
+        Write-Host "📝 Configuring environment..."
+        azd env get-values > .env
+        Write-Host "Environment file created"
+        
+        Write-Host "⏳ Waiting 30 seconds for RBAC role propagation..."
+        Start-Sleep -Seconds 30
+        Write-Host "✅ Ready for deployment"
+
   postdeploy:
     posix:
       shell: sh
       run: |
-        echo "Updating container apps with environment variables..."
+        echo "🔧 Updating container apps with cross-service URLs..."
+        
         API_NAME=$(azd env get-value AZURE_CONTAINER_APP_API_NAME)
         WEB_NAME=$(azd env get-value AZURE_CONTAINER_APP_WEB_NAME)
-        API_URL=$(azd env get-value API_URL)
-        WEB_URL=$(azd env get-value WEB_URL)
         RESOURCE_GROUP=$(azd env get-value AZURE_RESOURCE_GROUP)
         
-        echo "Updating API with FRONTEND_URL=$WEB_URL"
+        # Get actual FQDNs from deployed apps
+        API_FQDN=$(az containerapp show --name "$API_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
+        WEB_FQDN=$(az containerapp show --name "$WEB_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
+        
+        API_URL="https://$API_FQDN"
+        WEB_URL="https://$WEB_FQDN"
+        
+        echo "API URL: $API_URL"
+        echo "Web URL: $WEB_URL"
+        
+        # Update API with frontend URL for CORS
+        echo "Updating API with FRONTEND_URL..."
         az containerapp update \
           --name "$API_NAME" \
           --resource-group "$RESOURCE_GROUP" \
           --set-env-vars "FRONTEND_URL=$WEB_URL" \
           --output none
         
-        echo "Updating frontend app with VITE_API_URL=$API_URL"
+        # Update frontend with API URL
+        echo "Updating frontend with VITE_API_URL..."
         az containerapp update \
           --name "$WEB_NAME" \
           --resource-group "$RESOURCE_GROUP" \
           --set-env-vars "VITE_API_URL=$API_URL" \
           --output none
         
-        echo "Both container apps updated successfully"
+        echo ""
+        echo "🎉 Deployment complete!"
+        echo ""
+        echo "Application URLs:"
+        echo "  Frontend: $WEB_URL"
+        echo "  API:      $API_URL"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Open $WEB_URL in your browser"
+        echo "  2. Test file upload"
+        echo "  3. View logs: azd logs"
+        echo ""
     windows:
       shell: pwsh
       run: |
-        Write-Host "Updating container apps with environment variables..."
+        Write-Host "🔧 Updating container apps with cross-service URLs..."
+        
         $API_NAME = azd env get-value AZURE_CONTAINER_APP_API_NAME
         $WEB_NAME = azd env get-value AZURE_CONTAINER_APP_WEB_NAME
-        $API_URL = azd env get-value API_URL
-        $WEB_URL = azd env get-value WEB_URL
         $RESOURCE_GROUP = azd env get-value AZURE_RESOURCE_GROUP
         
-        Write-Host "Updating API with FRONTEND_URL=$WEB_URL"
+        # Get actual FQDNs from deployed apps
+        $API_FQDN = az containerapp show --name "$API_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv
+        $WEB_FQDN = az containerapp show --name "$WEB_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv
+        
+        $API_URL = "https://$API_FQDN"
+        $WEB_URL = "https://$WEB_FQDN"
+        
+        Write-Host "API URL: $API_URL"
+        Write-Host "Web URL: $WEB_URL"
+        
+        # Update API with frontend URL for CORS
+        Write-Host "Updating API with FRONTEND_URL..."
         az containerapp update `
           --name "$API_NAME" `
           --resource-group "$RESOURCE_GROUP" `
           --set-env-vars "FRONTEND_URL=$WEB_URL" `
           --output none
         
-        Write-Host "Updating frontend app with VITE_API_URL=$API_URL"
+        # Update frontend with API URL
+        Write-Host "Updating frontend with VITE_API_URL..."
         az containerapp update `
           --name "$WEB_NAME" `
           --resource-group "$RESOURCE_GROUP" `
           --set-env-vars "VITE_API_URL=$API_URL" `
           --output none
         
-        Write-Host "Both container apps updated successfully"
-
-  postdown:
-    posix:
-      shell: sh
-      run: |
-        echo "Cleaning up environment file..."
-        rm -f .env
-        echo "Environment file removed."
-    windows:
-      shell: pwsh
-      run: |
-        Write-Host "Cleaning up environment file..."
-        Remove-Item -Path .env -ErrorAction SilentlyContinue
-        Write-Host "Environment file removed."
+        Write-Host ""
+        Write-Host "🎉 Deployment complete!"
+        Write-Host ""
+        Write-Host "Application URLs:"
+        Write-Host "  Frontend: $WEB_URL"
+        Write-Host "  API:      $API_URL"
+        Write-Host ""
+        Write-Host "Next steps:"
+        Write-Host "  1. Open $WEB_URL in your browser"
+        Write-Host "  2. Test file upload"
+        Write-Host "  3. View logs: azd logs"
+        Write-Host ""
