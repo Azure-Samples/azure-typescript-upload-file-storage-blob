@@ -1,0 +1,91 @@
+%% Azure Infrastructure Architecture
+%% Shows all Azure resources, RBAC relationships, and deployment structure
+
+graph TB
+    %% External
+    User[👤 Users<br/>Browser] --> WebApp
+    Developer[👨‍💻 Developer<br/>CLI/Portal] -.Deploys with.-> AZD[Azure Developer CLI<br/>azd up]
+    
+    %% Azure Subscription
+    subgraph AzureSub["☁️ Azure Subscription"]
+        
+        %% Resource Group
+        subgraph RG["📦 Resource Group<br/>rg-{env}"]
+            
+            %% Security & Identity
+            subgraph Security["🔐 Security & Identity"]
+                MI[User-Assigned<br/>Managed Identity<br/>No secrets/keys]
+            end
+            
+            %% Monitoring
+            subgraph Monitoring["📊 Monitoring"]
+                LAW[Log Analytics<br/>Workspace<br/>30-day retention]
+            end
+            
+            %% Container Infrastructure
+            subgraph ContainerInfra["🐳 Container Infrastructure"]
+                ACR[Azure Container<br/>Registry<br/>Basic SKU<br/>Stores: api, web images]
+                
+                ACAEnv[Container Apps<br/>Environment<br/>Zone: Single AZ]
+            end
+            
+            %% Applications
+            subgraph Applications["⚙️ Applications"]
+                APIApp[API Container App<br/>Fastify + TypeScript<br/>Port: 3000<br/>Scale: 0-1 replicas<br/>CPU: 0.5, RAM: 1Gi]
+                
+                WebApp[Web Container App<br/>React + Vite<br/>Port: 8080<br/>Scale: 1-3 replicas<br/>CPU: 0.5, RAM: 1Gi]
+            end
+            
+            %% Storage
+            subgraph Storage["💾 Storage"]
+                SA[(Storage Account<br/>StorageV2, Standard_LRS<br/>Container: 'upload'<br/>CORS enabled<br/>Public blob access)]
+            end
+            
+            %% Connections
+            ACAEnv -.Hosts.-> APIApp
+            ACAEnv -.Hosts.-> WebApp
+            ACAEnv -.Sends logs to.-> LAW
+            
+            ACR -.Provides images to.-> APIApp
+            ACR -.Provides images to.-> WebApp
+            
+            APIApp -->|File operations<br/>SAS generation| SA
+            WebApp -->|Direct file upload<br/>with SAS token| SA
+            
+            %% RBAC Relationships (dashed lines)
+            MI -.RBAC:<br/>Storage Blob Data<br/>Contributor.-> SA
+            MI -.RBAC:<br/>Storage Blob<br/>Delegator.-> SA
+            MI -.RBAC:<br/>AcrPull.-> ACR
+            
+            MI -.Assigned to.-> APIApp
+            MI -.Assigned to.-> WebApp
+        end
+        
+        %% Deployment
+        AZD -.Provisions.-> RG
+        AZD -.Builds & pushes.-> ACR
+        AZD -.Deploys apps.-> APIApp
+        AZD -.Deploys apps.-> WebApp
+    end
+    
+    %% Environment Variables Flow
+    SA -.AZURE_STORAGE_<br/>ACCOUNT_NAME.-> APIApp
+    MI -.AZURE_CLIENT_ID.-> APIApp
+    APIApp -.API_URL.-> WebApp
+    
+    %% Styling
+    classDef userClass fill:#E1F5FF,stroke:#0078D4,stroke-width:3px
+    classDef securityClass fill:#FFEBEE,stroke:#F44336,stroke-width:3px
+    classDef monitoringClass fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px
+    classDef containerClass fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px
+    classDef appClass fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px
+    classDef storageClass fill:#E3F2FD,stroke:#2196F3,stroke-width:3px
+    classDef deployClass fill:#FFF3E0,stroke:#FF9800,stroke-width:2px
+    
+    class User,Developer userClass
+    class MI securityClass
+    class LAW monitoringClass
+    class ACR,ACAEnv containerClass
+    class APIApp,WebApp appClass
+    class SA storageClass
+    class AZD deployClass
