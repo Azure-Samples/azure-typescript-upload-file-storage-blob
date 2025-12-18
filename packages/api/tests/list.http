@@ -1,0 +1,5 @@
+### List files in upload container (default)
+GET http://localhost:3000/api/list HTTP/1.1
+
+### List files with explicit container parameter
+GET http://localhost:3000/api/list?container=upload HTTP/1.1

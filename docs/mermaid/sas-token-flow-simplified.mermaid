@@ -1,0 +1,41 @@
+%% Simplified SAS Token Flow
+%% High-level overview of User Delegation SAS pattern
+
+sequenceDiagram
+    participant User as 👤 User
+    participant Frontend as React App
+    participant API as Fastify API
+    participant Azure as Azure Services
+    
+    %% Select File
+    User->>Frontend: 👆 1. SELECT FILE
+    Frontend->>Frontend: 2. File selected & validated
+    
+    %% Request SAS Token
+    User->>Frontend: 👆 3. GET SAS TOKEN
+    Frontend->>API: 4. Request SAS token<br/>GET /api/sas
+    
+    %% Generate SAS Token
+    Note over API,Azure: Authenticate & Generate SAS
+    API->>Azure: 5. Authenticate with<br/>Managed Identity
+    Azure-->>API: 6. Return User Delegation Key
+    API->>API: 7. Generate SAS URL<br/>with time-limited permissions
+    API-->>Frontend: 8. Return SAS URL
+    Frontend->>Frontend: 9. Store SAS URL
+    
+    %% Upload File
+    Note over Frontend,Azure: Direct Upload to Storage
+    User->>Frontend: 👆 10. UPLOAD FILE
+    Frontend->>Azure: 11. PUT *.PNG to Blob Storage<br/>using SAS URL
+    Azure->>Azure: 12. Validate SAS<br/>& permissions
+    Azure-->>Frontend: 13. Upload complete
+    
+    %% Confirm Success
+    Frontend->>API: 14. List uploaded files
+    API->>Azure: 15. Query Blob Storage
+    Azure-->>API: 16. Return file list
+    API-->>Frontend: 17. Return files
+    Frontend->>User: 18. Show success
+    
+    %% Key Benefits
+    Note over User,Azure: ✅ Keyless (Managed Identity)<br/>✅ Time-Limited Access<br/>✅ Direct Upload (no API proxy)

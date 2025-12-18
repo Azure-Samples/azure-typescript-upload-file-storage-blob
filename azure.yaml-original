@@ -1,0 +1,78 @@
+name: azure-upload-file-to-storage
+metadata:
+  template: azure-upload-file-to-storage@1.0.0
+
+infra:
+  bicep:
+    path: ./infra/main.bicep
+    parameters:
+      principalId: ${AZURE_PRINCIPAL_ID}
+
+
+services:
+  api:
+    project: ./packages/api
+    language: ts
+    host: containerapp
+    resourceName: ${AZURE_CONTAINER_APP_API_NAME}
+    docker:
+      path: ./Dockerfile
+      context: ./
+  app:
+    project: ./packages/app
+    language: ts
+    host: containerapp
+    resourceName: ${AZURE_CONTAINER_APP_WEB_NAME}
+    docker:
+      path: ./Dockerfile
+      context: ./
+
+hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: |
+        echo "Getting Azure principal ID..."
+        PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
+        azd env set AZURE_PRINCIPAL_ID $PRINCIPAL_ID
+        echo "Principal ID set: $PRINCIPAL_ID"
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Getting Azure principal ID..."
+        $PRINCIPAL_ID = az ad signed-in-user show --query id -o tsv
+        azd env set AZURE_PRINCIPAL_ID $PRINCIPAL_ID
+        Write-Host "Principal ID set: $PRINCIPAL_ID"
+
+  postprovision:
+    posix: 
+      shell: sh
+      run: |
+        # Get environment values for the application
+        azd env get-values > .env
+        echo "Environment configured."
+        echo "Waiting 30 seconds for RBAC role propagation..."
+        sleep 30
+        echo "Ready for deployment."
+    windows:
+      shell: pwsh
+      run: |
+        azd env get-values > .env
+        Write-Host "Environment configured."
+        Write-Host "Waiting 30 seconds for RBAC role propagation..."
+        Start-Sleep -Seconds 30
+        Write-Host "Ready for deployment."
+
+  postdown:
+    posix:
+      shell: sh
+      run: |
+        echo "Cleaning up environment file..."
+        rm -f .env
+        echo "Environment file removed."
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Cleaning up environment file..."
+        Remove-Item -Path .env -ErrorAction SilentlyContinue
+        Write-Host "Environment file removed."

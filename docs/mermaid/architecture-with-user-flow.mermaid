@@ -1,0 +1,62 @@
+graph TB
+    User[👤 User]
+    
+    subgraph Azure["☁️ Azure Cloud"]
+        subgraph ContainerApps["Container Apps Environment"]
+            Frontend[🌐 Frontend<br/>React + Vite]
+            Backend[⚙️ Backend<br/>Fastify API]
+        end
+        
+        ManagedIdentity[🔐 Managed<br/>Identity]
+        Registry[🐋 Container<br/>Registry]
+        Storage[🗄️ Storage<br/>Blob Container]
+    end
+    
+    %% User interactions with UI buttons
+    User -->|👆 1. SELECT FILE| Frontend
+    User -->|👆 2. GET SAS TOKEN| Frontend
+    User -->|👆 7. UPLOAD FILE| Frontend
+    
+    %% SAS token flow - blue for request/response
+    Frontend -->|3. Request SAS| Backend
+    Backend -->|4. Get User Delegation Key| Storage
+    Storage -->|5. Return Key| Backend
+    Backend -->|6. Return SAS URL| Frontend
+    
+    %% File upload flow - green for data upload
+    Frontend -->|8. Direct Upload *.PNG with SAS| Storage
+    
+    %% File listing flow - purple for queries
+    Frontend -->|9. List Files| Backend
+    Backend -->|10. Query Blobs| Storage
+    
+    %% Authentication flow - orange dashed
+    ManagedIdentity -.->|Provides Auth| Frontend
+    ManagedIdentity -.->|Provides Auth| Backend
+    
+    %% Docker container images - gray dashed
+    Registry -.->|Docker Images| Frontend
+    Registry -.->|Docker Images| Backend
+
+    %% Styling for nodes - Azure Branded Colors
+    classDef userStyle fill:#50E6FF,stroke:#0078D4,stroke-width:3px,color:#000
+    classDef frontendStyle fill:#0078D4,stroke:#002050,stroke-width:2px,color:#fff
+    classDef backendStyle fill:#0078D4,stroke:#002050,stroke-width:2px,color:#fff
+    classDef identityStyle fill:#FFB900,stroke:#D83B01,stroke-width:2px,color:#000
+    classDef registryStyle fill:#00B294,stroke:#107C10,stroke-width:2px,color:#fff
+    classDef storageStyle fill:#0078D4,stroke:#002050,stroke-width:3px,color:#fff
+
+    class User userStyle
+    class Frontend frontendStyle
+    class Backend backendStyle
+    class ManagedIdentity identityStyle
+    class Registry registryStyle
+    class Storage storageStyle
+    
+    %% Link styles for colored flows
+    linkStyle 0,1,2 stroke:#FF8C00,stroke-width:4px
+    linkStyle 3,4,5,6 stroke:#0078D4,stroke-width:2px
+    linkStyle 7 stroke:#107C10,stroke-width:3px
+    linkStyle 8,9 stroke:#B4A0FF,stroke-width:2px
+    linkStyle 10,11 stroke:#FFB900,stroke-width:1px,stroke-dasharray:5
+    linkStyle 12,13 stroke:#5E5E5E,stroke-width:1px,stroke-dasharray:5
