@@ -8,11 +8,11 @@ sequenceDiagram
     participant Azure as Azure Services
     
     %% Select File
-    User->>Frontend: 1. Click "SELECT FILE"
+    User->>Frontend: 👆 1. SELECT FILE
     Frontend->>Frontend: 2. File selected & validated
     
     %% Request SAS Token
-    User->>Frontend: 3. Click "GET SAS TOKEN"
+    User->>Frontend: 👆 3. GET SAS TOKEN
     Frontend->>API: 4. Request SAS token<br/>GET /api/sas
     
     %% Generate SAS Token
@@ -25,8 +25,8 @@ sequenceDiagram
     
     %% Upload File
     Note over Frontend,Azure: Direct Upload to Storage
-    User->>Frontend: 10. Click "UPLOAD FILE"
-    Frontend->>Azure: 11. PUT file to Blob Storage<br/>using SAS URL
+    User->>Frontend: 👆 10. UPLOAD FILE
+    Frontend->>Azure: 11. PUT *.PNG to Blob Storage<br/>using SAS URL
     Azure->>Azure: 12. Validate SAS<br/>& permissions
     Azure-->>Frontend: 13. Upload complete
     

@@ -1,29 +1,41 @@
-graph LR
+graph TB
     User[👤 User]
-    Frontend[🌐 Web App<br/>Frontend]
-    Backend[⚙️ API App<br/>Backend]
-    ManagedIdentity[🔐 Managed<br/>Identity]
-    Registry[🐋 Container<br/>Registry]
-    Storage[🗄️ Storage<br/>Blob Container]
+    
+    subgraph Azure["☁️ Azure Cloud"]
+        subgraph ContainerApps["Container Apps Environment"]
+            Frontend[🌐 Web App<br/>Frontend]
+            Backend[⚙️ API App<br/>Backend]
+        end
+        
+        ManagedIdentity[🔐 Managed<br/>Identity]
+        Registry[🐋 Container<br/>Registry]
+        Storage[🗄️ Storage<br/>Blob Container]
+    end
 
-    User -->|1. Access| Frontend
+    User -->|👆 1. Access| Frontend
     Frontend -->|2. API Call| Backend
-    Backend -->|3. Upload/List| Storage
+    Backend -->|3. Upload/List *.PNG| Storage
     
     ManagedIdentity -.->|Auth| Frontend
     ManagedIdentity -.->|Auth| Backend
-    ManagedIdentity -.->|Images| Registry
-    Registry -.->|Images| Frontend
-    Registry -.->|Images| Backend
+    ManagedIdentity -.->|ACR Pull| Registry
+    Registry -.->|Docker Images| Frontend
+    Registry -.->|Docker Images| Backend
 
-    classDef userStyle fill:#8B5A9F,stroke:#333,stroke-width:2px,color:#fff
-    classDef appStyle fill:#0078D4,stroke:#333,stroke-width:2px,color:#fff
-    classDef identityStyle fill:#00B294,stroke:#333,stroke-width:2px,color:#fff
-    classDef registryStyle fill:#50E6FF,stroke:#333,stroke-width:2px,color:#000
-    classDef storageStyle fill:#50E6FF,stroke:#333,stroke-width:2px,color:#000
+    classDef userStyle fill:#50E6FF,stroke:#0078D4,stroke-width:3px,color:#000
+    classDef appStyle fill:#0078D4,stroke:#002050,stroke-width:2px,color:#fff
+    classDef identityStyle fill:#FFB900,stroke:#D83B01,stroke-width:2px,color:#000
+    classDef registryStyle fill:#00B294,stroke:#107C10,stroke-width:2px,color:#fff
+    classDef storageStyle fill:#0078D4,stroke:#002050,stroke-width:3px,color:#fff
 
     class User userStyle
     class Frontend,Backend appStyle
     class ManagedIdentity identityStyle
     class Registry registryStyle
     class Storage storageStyle
+    
+    %% Link styles for colored flows
+    linkStyle 0 stroke:#FF8C00,stroke-width:4px
+    linkStyle 1,2 stroke:#0078D4,stroke-width:2px
+    linkStyle 3,4 stroke:#FFB900,stroke-width:1px,stroke-dasharray:5
+    linkStyle 5,6,7 stroke:#5E5E5E,stroke-width:1px,stroke-dasharray:5
