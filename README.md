@@ -2,7 +2,11 @@
 
 Modern file upload application with secure, keyless Azure Blob Storage integration.
 
-![Demo](docs/demo.gif)
+## 📋 What This Demonstrates
+
+This sample shows how to use **Shared Access Signature (SAS) tokens** for secure, direct browser-to-storage file uploads. SAS tokens provide **time-boxed and permission-boxed access** to Azure Storage—allowing users to upload files for a limited time with specific permissions, without exposing storage account keys. The application uses **User Delegation SAS tokens**, which are backed by Microsoft Entra ID credentials instead of storage keys, providing the highest level of security and auditability.
+
+![Demo](docs/media/demo.gif)
 
 ## 🚀 Get Started in 2 Minutes
 
@@ -33,23 +37,9 @@ That's it! The command creates all Azure resources, configures security, and dep
 
 ## What Gets Deployed
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Azure Cloud                          │
-│                                                           │
-│  ┌──────────────────────┐     ┌────────────────────┐   │
-│  │ Container App        │────▶│ Container App       │   │
-│  │  (React Frontend)    │     │   (Fastify API)     │   │
-│  └──────────────────────┘     └────────────────────┘   │
-│                                        │                  │
-│                                        ▼                  │
-│                              ┌──────────────────┐        │
-│                              │ Blob Storage     │        │
-│                              └──────────────────┘        │
-│                                                           │
-│  🔒 Managed Identity + RBAC (no storage keys!)          │
-└─────────────────────────────────────────────────────────┘
-```
+![Architecture](docs/media/architecture-simple.mermaid.png)
+
+🔒 **Security:** Managed Identity + RBAC (no storage keys!)
 
 ## ✨ Key Features
 
@@ -61,20 +51,22 @@ That's it! The command creates all Azure resources, configures security, and dep
 
 ## 📚 Documentation
 
+**Start here:** [docs/README.md](./docs/README.md) - Complete learning guide
+
 ### Getting Started
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Complete deployment guide
-- **[QUICKSTART.md](./QUICKSTART.md)** - Quick command reference
-- **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** - Local development guide
+- [docs/QUICKSTART.md](./docs/QUICKSTART.md) - Quick command reference
+- [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) - Complete deployment guide
+- [docs/LOCAL-DEVELOPMENT.md](./docs/LOCAL-DEVELOPMENT.md) - Local development guide
 
 ### Architecture & Design
-- **[docs/FUNCTIONAL-SPEC.md](./docs/FUNCTIONAL-SPEC.md)** - Technical specification
-- **[docs/SAS-TOKEN-ARCHITECTURE.md](./docs/SAS-TOKEN-ARCHITECTURE.md)** - Security architecture
-- **[docs/DIAGRAMS.md](./docs/DIAGRAMS.md)** - Visual architecture diagrams
-- **[docs/auth.md](./docs/auth.md)** - Authentication troubleshooting
+- [docs/FUNCTIONAL-SPEC.md](./docs/FUNCTIONAL-SPEC.md) - Technical specification
+- [docs/SAS-TOKEN-ARCHITECTURE.md](./docs/SAS-TOKEN-ARCHITECTURE.md) - Security architecture
+- [docs/DIAGRAMS.md](./docs/DIAGRAMS.md) - Visual architecture diagrams
+- [docs/auth.md](./docs/auth.md) - Authentication troubleshooting
 
 ## 🛠️ Local Development
 
-Want to develop locally? See **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** for complete instructions.
+Want to develop locally? See [docs/LOCAL-DEVELOPMENT.md](./docs/LOCAL-DEVELOPMENT.md) for complete instructions.
 
 Quick start:
 
@@ -126,7 +118,7 @@ npm run dev
 | `npm run build` | Build both services |
 | `npm run docker:up` | Run with Docker Compose |
 
-See **[QUICKSTART.md](./QUICKSTART.md)** for all available commands.
+See [docs/QUICKSTART.md](./docs/QUICKSTART.md) for all available commands.
 
 ## 📊 Key Technologies
 
@@ -151,36 +143,11 @@ Perfect for applications that need:
 
 **Can't upload files?**
 - Wait 5-10 minutes after first deployment (RBAC propagation)
-- See **[docs/auth.md](./docs/auth.md)** for detailed troubleshooting
+- See [docs/auth.md](./docs/auth.md) for detailed troubleshooting
 
 **Local development issues?**
-- See **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** troubleshooting section
+- See [docs/LOCAL-DEVELOPMENT.md](./docs/LOCAL-DEVELOPMENT.md) troubleshooting section
 
-## License
-
-MIT
-
-## Support
-
-For issues:
-1. Check documentation in relevant README files
-2. Review troubleshooting sections
-3. Check Azure CLI authentication: `az account show`
-4. Verify environment variables in `.env` files
-5. Check logs: `npm run docker:logs` or `npm run logs`
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes
-4. Run `npm run check && npm run lint && npm run build`
-5. Submit a pull request
-
-## Version History
-
-- **v2.0.0** - Fastify API + managed identity + user delegation SAS
-- **v1.0.0** - Azure Functions + storage keys (deprecated)
 ## 📝 License
 
 MIT
