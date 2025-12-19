@@ -49,10 +49,10 @@ sequenceDiagram
     Frontend->>Frontend: 16. Store SAS URL in state
     
     %% File Upload
-    Note over Frontend,Storage: Phase 5: Upload File Directly to Storage
+    Note over User,Storage: Phase 5: Browser → Storage Direct Upload<br/>(File does NOT go through API)
     User->>Frontend: 17. Click "UPLOAD FILE" button
     Frontend->>Frontend: 18. Convert File to ArrayBuffer
-    Frontend->>Storage: 19. PUT /upload/photo.jpg<br/>with SAS query params<br/>Body: file data
+    User->>Storage: 19. PUT /upload/photo.jpg directly<br/>with SAS query params<br/>Body: file data (bypasses API)
     
     %% SAS Validation
     Storage->>Storage: 20. Validate SAS:<br/>- Signature matches?<br/>- Not expired?<br/>- Permission = write?
@@ -61,10 +61,10 @@ sequenceDiagram
     
     %% Store File
     Storage->>Storage: 23. Write blob to container
-    Storage-->>Frontend: 24. 201 Created
+    Storage-->>User: 24. 201 Created
     
     %% Success Feedback
-    Frontend->>User: 25. Show success message
+    User->>Frontend: 25. View uploaded files
     Frontend->>API: 26. GET /api/list?container=upload
     API->>Storage: 27. listBlobsFlat()
     Storage-->>API: 28. Return blob list

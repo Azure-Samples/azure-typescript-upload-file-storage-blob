@@ -64,20 +64,30 @@ function App() {
       }
     })
       .then((response) => {
+        console.log('SAS token fetch response:', response);
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
         if (!response.ok) {
           throw new Error(`Error: ${response.status} ${response.statusText} - URL: ${url}`);
         }
         return response.json();
       })
       .then((data: SasResponse) => {
+        console.log('SAS token response data:', data);
         const { url } = data;
+        console.log('SAS token URL received:', url);
         setSasTokenUrl(url);
       })
       .catch((error: unknown) => {
+        console.error('SAS token fetch error:', error);
         if (error instanceof Error) {
           const { message, stack } = error;
+          console.error('Error message:', message);
+          console.error('Error stack:', stack);
           setSasTokenUrl(`Error getting sas token: ${message} ${stack || ''}`);
         } else {
+          console.error('Unknown error type:', error);
           setUploadStatus(String(error));
         }
       });
