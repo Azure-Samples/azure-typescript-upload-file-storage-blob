@@ -15,7 +15,6 @@ graph TB
     %% User interactions with UI buttons
     User -->|👆 1. SELECT FILE| Frontend
     User -->|👆 2. GET SAS TOKEN| Frontend
-    User -->|👆 7. UPLOAD FILE| Frontend
     
     %% SAS token flow - blue for request/response
     Frontend -->|3. Request SAS| Backend
@@ -23,8 +22,9 @@ graph TB
     Storage -->|5. Return Key| Backend
     Backend -->|6. Return SAS URL| Frontend
     
-    %% File upload flow - green for data upload
-    Frontend -->|8. Direct Upload *.PNG with SAS| Storage
+    %% File upload flow - green for data upload (Browser → Storage, NOT through API)
+    User -->|👆 7. UPLOAD FILE| Frontend
+    User -->|8. Browser uploads *.PNG directly with SAS| Storage
     
     %% File listing flow - purple for queries
     Frontend -->|9. List Files| Backend

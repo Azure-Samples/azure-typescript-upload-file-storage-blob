@@ -31,22 +31,6 @@ services:
         - "VITE_API_URL=${API_URL}"
 
 hooks:
-  preprovision:
-    posix:
-      shell: sh
-      run: |
-        echo "🚀 Getting Azure principal ID for RBAC assignments..."
-        PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
-        azd env set AZURE_PRINCIPAL_ID "$PRINCIPAL_ID"
-        echo "Principal ID set: $PRINCIPAL_ID"
-    windows:
-      shell: pwsh
-      run: |
-        Write-Host "🚀 Getting Azure principal ID for RBAC assignments..."
-        $PRINCIPAL_ID = az ad signed-in-user show --query id -o tsv
-        azd env set AZURE_PRINCIPAL_ID "$PRINCIPAL_ID"
-        Write-Host "Principal ID set: $PRINCIPAL_ID"
-
   postprovision:
     posix:
       shell: sh
@@ -73,81 +57,33 @@ hooks:
     posix:
       shell: sh
       run: |
-        echo "🔧 Updating container apps with cross-service URLs..."
-        
-        API_NAME=$(azd env get-value AZURE_CONTAINER_APP_API_NAME)
-        WEB_NAME=$(azd env get-value AZURE_CONTAINER_APP_WEB_NAME)
         RESOURCE_GROUP=$(azd env get-value AZURE_RESOURCE_GROUP)
+        WEB_URL=$(azd env get-value WEB_URL)
+        API_NAME=$(az containerapp list --resource-group "$RESOURCE_GROUP" --query "[?tags.\"azd-service-name\"=='api'].name" -o tsv)
         
-        # Get actual FQDNs from deployed apps
-        API_FQDN=$(az containerapp show --name "$API_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
-        WEB_FQDN=$(az containerapp show --name "$WEB_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
-        
-        API_URL="https://$API_FQDN"
-        WEB_URL="https://$WEB_FQDN"
-        
-        echo "API URL: $API_URL"
-        echo "Web URL: $WEB_URL"
-        
-        # Update API with frontend URL for CORS
-        echo "Updating API with FRONTEND_URL..."
-        az containerapp update \
+        echo "🔧 Setting API CORS to allow: $WEB_URL"
+        az containerapp ingress cors update \
           --name "$API_NAME" \
           --resource-group "$RESOURCE_GROUP" \
-          --set-env-vars "FRONTEND_URL=$WEB_URL" \
-          --output none
-        
-        echo ""
-        echo "🎉 Deployment complete!"
-        echo ""
-        echo "Application URLs:"
-        echo "  Frontend: $WEB_URL"
-        echo "  API:      $API_URL"
-        echo ""
-        echo "Next steps:"
-        echo "  1. Open $WEB_URL in your browser"
-        echo "  2. Test file upload"
-        echo "  3. View logs: azd logs"
-        echo ""
+          --allowed-origins "$WEB_URL" \
+          --allowed-methods GET POST PUT DELETE OPTIONS \
+          --allowed-headers "*" \
+          --max-age 3600
     windows:
       shell: pwsh
       run: |
-        Write-Host "🔧 Updating container apps with cross-service URLs..."
-        
-        $API_NAME = azd env get-value AZURE_CONTAINER_APP_API_NAME
-        $WEB_NAME = azd env get-value AZURE_CONTAINER_APP_WEB_NAME
         $RESOURCE_GROUP = azd env get-value AZURE_RESOURCE_GROUP
+        $WEB_URL = azd env get-value WEB_URL
+        $API_NAME = az containerapp list --resource-group "$RESOURCE_GROUP" --query "[?tags.\`"azd-service-name\`"=='api'].name" -o tsv
         
-        # Get actual FQDNs from deployed apps
-        $API_FQDN = az containerapp show --name "$API_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv
-        $WEB_FQDN = az containerapp show --name "$WEB_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv
-        
-        $API_URL = "https://$API_FQDN"
-        $WEB_URL = "https://$WEB_FQDN"
-        
-        Write-Host "API URL: $API_URL"
-        Write-Host "Web URL: $WEB_URL"
-        
-        # Update API with frontend URL for CORS
-        Write-Host "Updating API with FRONTEND_URL..."
-        az containerapp update `
-          --name "$API_NAME" `
-          --resource-group "$RESOURCE_GROUP" `
-          --set-env-vars "FRONTEND_URL=$WEB_URL" `
-          --output none
-        
-        Write-Host ""
-        Write-Host "🎉 Deployment complete!"
-        Write-Host ""
-        Write-Host "Application URLs:"
-        Write-Host "  Frontend: $WEB_URL"
-        Write-Host "  API:      $API_URL"
-        Write-Host ""
-        Write-Host "Next steps:"
-        Write-Host "  1. Open $WEB_URL in your browser"
-        Write-Host "  2. Test file upload"
-        Write-Host "  3. View logs: azd logs"
-        Write-Host ""
+        Write-Host "🔧 Setting API CORS to allow: $WEB_URL"
+        az containerapp ingress cors update `
+          --name $API_NAME `
+          --resource-group $RESOURCE_GROUP `
+          --allowed-origins $WEB_URL `
+          --allowed-methods GET POST PUT DELETE OPTIONS `
+          --allowed-headers "*" `
+          --max-age 3600
 
   postdown:
     posix:
