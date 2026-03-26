@@ -1,0 +1,60 @@
+version: 2
+updates:
+  # Root package.json (workspace root)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      root-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+
+  # packages/ workspace root
+  - package-ecosystem: "npm"
+    directory: "/packages"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      packages-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+
+  # packages/api
+  - package-ecosystem: "npm"
+    directory: "/packages/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      api-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+
+  # packages/app
+  - package-ecosystem: "npm"
+    directory: "/packages/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      app-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        patterns:
+          - "*"
